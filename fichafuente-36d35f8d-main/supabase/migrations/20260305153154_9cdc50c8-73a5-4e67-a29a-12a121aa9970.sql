@@ -1,0 +1,1 @@
+ALTER TABLE public.fichas DROP CONSTRAINT fichas_title_length;
