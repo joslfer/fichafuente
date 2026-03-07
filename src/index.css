@@ -142,3 +142,42 @@
 .animate-counter-ring {
   animation: counter-ring 0.6s ease-out;
 }
+
+
+.prose p:empty {
+  height: 1em;
+}
+
+
+.prose p:empty::after {
+  content: "\00a0";
+  display: block;
+}
+
+
+.prose p:has(br) {
+  min-height: 1em;
+}
+
+.prose p {
+  min-height: 1em;
+}
+
+
+.prose p:empty {
+  display: block !important;
+  min-height: 1.5em !important;
+  content: " ";
+}
+
+.ficha-content p { margin-bottom: 1em; min-height: 1em; }
+.ficha-content p:empty { margin-bottom: 1em; height: 1em; display: block; }
+.ficha-content strong { font-weight: 600; }
+.ficha-content em { font-style: italic; }
+.ficha-content u { text-decoration: underline; }
+.ficha-content s { text-decoration: line-through; }
+.ficha-content ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1em; }
+.ficha-content ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 1em; }
+.ficha-content li { margin-bottom: 0.25em; }
+.ficha-content blockquote { border-left: 4px solid hsl(var(--primary) / 0.4); padding-left: 1rem; font-style: italic; color: hsl(var(--muted-foreground)); margin: 1em 0; }
+.ficha-content mark { background-color: #fef08a; border-radius: 2px; padding: 0 2px; }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { FileText, ExternalLink, Calendar, Eye, Hash, Quote, ArrowLeft, Link2, Check } from "lucide-react";
+import { FileText, ExternalLink, Calendar, Eye, Hash, Quote, ArrowLeft, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Ficha } from "@/hooks/useFichas";
@@ -14,12 +14,9 @@ const PublicFicha = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  useEffect(() => {
+useEffect(() => {
     const load = async () => {
       if (!slug) return;
-
-      // Increment visit
-      await supabase.rpc("increment_visit_count", { ficha_slug: slug });
 
       const { data, error } = await supabase
         .from("fichas")
@@ -33,11 +30,21 @@ const PublicFicha = () => {
         setNotFound(true);
       } else {
         setFicha(data);
+
+        // Solo contar visita si no es el dueño
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || user.id !== data.user_id) {
+          await supabase.rpc("increment_visit_count", { ficha_slug: slug });
+        }
       }
       setLoading(false);
     };
     load();
   }, [slug]);
+  
+  const renderContent = (html: string) => {
+    return html.replace(/<p><\/p>/g, '<p><br></p>');
+  };
 
   if (loading) {
     return (
@@ -65,17 +72,19 @@ const PublicFicha = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-12">
-        {/* Brand */}
         <a href="/" className="inline-flex items-center gap-1 mb-8 text-muted-foreground hover:text-foreground transition-colors">
-          <span className="text-xs font-medium"><span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span><span className="text-primary">fuente</span></span>
+          <span className="text-xs font-medium">
+            <span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span>
+            <span className="text-primary">fuente</span>
+          </span>
         </a>
 
         <article className="animate-fade-in space-y-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{ficha.title}</h1>
 
           <div
-            className="text-[15px] leading-relaxed text-foreground/90 prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: ficha.content }}
+            className="text-[15px] leading-relaxed text-foreground/90 ficha-content"
+            dangerouslySetInnerHTML={{ __html: renderContent(ficha.content) }}
           />
 
           {ficha.quote && (
@@ -85,7 +94,6 @@ const PublicFicha = () => {
             </blockquote>
           )}
 
-          {/* Source */}
           <div className="flex items-center gap-2 pt-4 border-t border-border/40">
             {ficha.source_url ? (
               <a href={ficha.source_url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary underline hover:text-primary/80 transition-colors">
@@ -97,7 +105,6 @@ const PublicFicha = () => {
             )}
           </div>
 
-          {/* Meta */}
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             {ficha.data_date && (
               <span className="flex items-center gap-1">
@@ -123,7 +130,6 @@ const PublicFicha = () => {
           )}
         </article>
 
-        {/* Copy link button */}
         <div className="mt-10 flex justify-center">
           <Button
             onClick={() => {
