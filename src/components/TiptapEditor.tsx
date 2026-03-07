@@ -1,7 +1,8 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Bold, Italic } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Underline from "@tiptap/extension-underline";
+import Highlight from "@tiptap/extension-highlight";
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Highlighter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 
@@ -14,10 +15,22 @@ type TiptapEditorProps = {
 const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => {
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        blockquote: false,
-        orderedList: false,
+        StarterKit.configure({
+        orderedList: {
+          HTMLAttributes: { class: "list-decimal pl-5" },
+        },
+        bulletList: {
+          HTMLAttributes: { class: "list-disc pl-5" },
+        },
+        blockquote: {
+          HTMLAttributes: { class: "border-l-4 border-primary/40 pl-4 italic text-muted-foreground my-2" },
+        },
+        heading: false,
       }),
+      Underline,
+        Highlight.configure({
+      HTMLAttributes: { class: "bg-yellow-200 dark:bg-yellow-800 rounded-sm px-0.5" },
+}),
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -25,8 +38,7 @@ const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => 
     },
     editorProps: {
       attributes: {
-        class:
-          "min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 prose prose-sm max-w-none",
+        class: "min-h-[200px] w-full px-3 py-2 text-sm focus:outline-none prose prose-sm max-w-none",
       },
     },
   });
@@ -42,33 +54,64 @@ const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => 
   const ToolBtn = ({
     active,
     onClick,
+    title,
     children,
   }: {
     active: boolean;
     onClick: () => void;
+    title: string;
     children: React.ReactNode;
   }) => (
-    <Button
+    <button
       type="button"
-      variant="ghost"
-      size="icon"
-      className={cn("h-7 w-7", active && "bg-accent")}
+      title={title}
       onClick={onClick}
+      className={cn(
+        "h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
+        active && "bg-accent text-foreground"
+      )}
     >
       {children}
-    </Button>
+    </button>
   );
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-0.5 border border-border rounded-md p-1 bg-card">
-        <ToolBtn active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
+    <div className="rounded-lg border border-input bg-background overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/30 flex-wrap">
+        <ToolBtn title="Negrita" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
           <Bold className="w-3.5 h-3.5" />
         </ToolBtn>
-        <ToolBtn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
+        <ToolBtn title="Cursiva" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
           <Italic className="w-3.5 h-3.5" />
         </ToolBtn>
+        <ToolBtn title="Subrayado" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+          <UnderlineIcon className="w-3.5 h-3.5" />
+        </ToolBtn>
+        <ToolBtn title="Tachado" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
+          <Strikethrough className="w-3.5 h-3.5" />
+        </ToolBtn>
+
+        <div className="w-px h-4 bg-border mx-1" />
+
+<ToolBtn title="Resaltar" active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleHighlight().run()}>
+  <Highlighter className="w-3.5 h-3.5" />
+</ToolBtn>
+        <ToolBtn title="Lista" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <List className="w-3.5 h-3.5" />
+        </ToolBtn>
+        <ToolBtn title="Lista numerada" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <ListOrdered className="w-3.5 h-3.5" />
+        </ToolBtn>
+
+        <div className="w-px h-4 bg-border mx-1" />
+
+        <ToolBtn title="Cita" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+          <Quote className="w-3.5 h-3.5" />
+        </ToolBtn>
       </div>
+
+      {/* Editor */}
       <EditorContent editor={editor} />
     </div>
   );

@@ -54,8 +54,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
 
   return (
     <article
-      className="group relative bg-card rounded-lg border border-border/60 p-5 hover:border-border transition-colors animate-fade-in flex flex-col"
-    >
+      className="group relative bg-card rounded-lg border border-border/60 p-5 hover:border-border transition-colors animate-fade-in flex flex-col min-h-[280px]"    >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3

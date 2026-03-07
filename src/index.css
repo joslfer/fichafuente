@@ -102,28 +102,17 @@
 
 @layer utilities {
   .ficha-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 1.25rem;
   }
 
-  .ficha-grid > * {
-    width: 100%;
-    max-width: 320px;
+  .ficha-grid-sm {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  @media (min-width: 640px) {
-    .ficha-grid > * {
-      width: calc(50% - 0.625rem);
-      max-width: 320px;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .ficha-grid > * {
-      width: calc(33.333% - 0.834rem);
-      max-width: 320px;
-    }
+  .ficha-grid-lg {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
