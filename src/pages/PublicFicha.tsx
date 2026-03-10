@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { FileText, ExternalLink, Calendar, Eye, Hash, Quote, ArrowLeft, Link2 } from "lucide-react";
+import { FileText, ExternalLink, Calendar, Hash, Quote, ArrowLeft, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Ficha } from "@/hooks/useFichas";
@@ -30,12 +30,6 @@ useEffect(() => {
         setNotFound(true);
       } else {
         setFicha(data);
-
-        // Solo contar visita si no es el dueño
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || user.id !== data.user_id) {
-          await supabase.rpc("increment_visit_count", { ficha_slug: slug });
-        }
       }
       setLoading(false);
     };
@@ -44,6 +38,16 @@ useEffect(() => {
   
   const renderContent = (html: string) => {
     return html.replace(/<p><\/p>/g, '<p><br></p>');
+  };
+
+  const formatSourceUrl = (url: string) => {
+    try {
+      const parsedUrl = new URL(url);
+      const normalizedPath = parsedUrl.pathname.replace(/\/$/, "");
+      return `${parsedUrl.hostname}${normalizedPath}`;
+    } catch {
+      return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    }
   };
 
   if (loading) {
@@ -73,28 +77,17 @@ useEffect(() => {
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-12">
         <a href="/" className="inline-flex items-center gap-1 mb-8 text-muted-foreground hover:text-foreground transition-colors">
-          <span className="text-xs font-medium">
+          <span className="text-sm font-medium">
             <span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span>
             <span className="text-primary">fuente</span>
           </span>
+          <span className="text-xs text-muted-foreground/90">· crea fichas con evidencia verificable</span>
         </a>
 
         <article className="animate-fade-in space-y-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{ficha.title}</h1>
 
-          <div
-            className="text-[15px] leading-relaxed text-foreground/90 ficha-content"
-            dangerouslySetInnerHTML={{ __html: renderContent(ficha.content) }}
-          />
-
-          {ficha.quote && (
-            <blockquote className="border-l-2 border-primary/40 pl-4 py-1 text-sm text-muted-foreground italic">
-              <Quote className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
-              {ficha.quote}
-            </blockquote>
-          )}
-
-          <div className="flex items-center gap-2 pt-4 border-t border-border/40">
+          <div className="flex flex-col gap-1 pt-1">
             {ficha.source_url ? (
               <a href={ficha.source_url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary underline hover:text-primary/80 transition-colors">
                 {ficha.source_name}
@@ -103,7 +96,30 @@ useEffect(() => {
             ) : (
               <span className="text-sm font-medium text-foreground">{ficha.source_name}</span>
             )}
+
+            {ficha.source_url && (
+              <a
+                href={ficha.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors break-all"
+              >
+                {formatSourceUrl(ficha.source_url)}
+              </a>
+            )}
           </div>
+
+          <div
+            className="text-[15px] leading-[1.45] text-foreground/90 ficha-content public-ficha-content font-[450]"
+            dangerouslySetInnerHTML={{ __html: renderContent(ficha.content) }}
+          />
+
+          {ficha.quote && (
+            <blockquote className="border-l-4 border-primary/70 bg-muted rounded-r-md pl-4 pr-3 py-2.5 text-sm text-foreground/90 italic">
+              <Quote className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+              {ficha.quote}
+            </blockquote>
+          )}
 
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             {ficha.data_date && (
@@ -112,10 +128,6 @@ useEffect(() => {
                 {format(new Date(ficha.data_date), "dd MMM yyyy", { locale: es })}
               </span>
             )}
-            <span className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              {ficha.visit_count} visitas
-            </span>
           </div>
 
           {ficha.tags && ficha.tags.length > 0 && (

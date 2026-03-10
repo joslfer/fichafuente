@@ -108,15 +108,7 @@ export const useFichaStats = () => {
         .eq("user_id", user!.id);
       if (error) throw error;
 
-      const { data: visitData, error: visitError } = await supabase
-        .from("fichas")
-        .select("monthly_visit_count")
-        .eq("user_id", user!.id);
-      if (visitError) throw visitError;
-
-      const monthlyVisits = (visitData || []).reduce((sum, f) => sum + (f.monthly_visit_count || 0), 0);
-
-      return { total: count ?? 0, monthlyVisits };
+      return { total: count ?? 0 };
     },
     enabled: !!user,
   });

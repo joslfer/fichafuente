@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useFichas, Ficha } from "@/hooks/useFichas";
-import Dashboard from "@/components/Dashboard";
 import FichaCard from "@/components/FichaCard";
 import FichaForm from "@/components/FichaForm";
 
@@ -46,9 +45,6 @@ const Index = () => {
                 <FileText className="w-5 h-5 text-primary" />
                 <span className="text-base font-semibold tracking-tight"><span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span><span className="text-primary">fuente</span></span>
               </div>
-              <div className="hidden sm:block">
-                <Dashboard />
-              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -70,11 +66,6 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Mobile dashboard */}
-      <div className="sm:hidden px-4 py-3 border-b border-border/40">
-        <Dashboard />
-      </div>
-
       {/* Search and filters */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5">
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
@@ -83,7 +74,7 @@ const Index = () => {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar fichas..."
+              placeholder="Buscar fichas, contenido..."
               className="pl-9 h-9 text-sm bg-card"
             />
           </div>
@@ -120,7 +111,9 @@ const Index = () => {
             <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
         ) : fichas && fichas.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 ${fichas.length < 3 ? "lg:grid-cols-2" : "lg:grid-cols-3"} gap-5`}
+          >
             {fichas.map((ficha) => (
               <FichaCard key={ficha.id} ficha={ficha} onEdit={handleEdit} searchQuery={searchQuery} />
             ))}
@@ -139,7 +132,18 @@ const Index = () => {
             )}
           </div>
         )}
+
       </div>
+
+      <footer className="mt-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+          {!isLoading && (
+            <p className="text-sm text-muted-foreground/75 text-center">
+              {(fichas?.length ?? 0)} fichas · {allTags.length} tags
+            </p>
+          )}
+        </div>
+      </footer>
 
       <FichaForm open={formOpen} onOpenChange={setFormOpen} editingFicha={editingFicha} />
     </div>

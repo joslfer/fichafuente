@@ -24,7 +24,6 @@ export type Database = {
           id: string
           images: Json | null
           is_public: boolean
-          monthly_visit_count: number
           public_slug: string | null
           quote: string | null
           source_name: string
@@ -34,8 +33,6 @@ export type Database = {
           updated_at: string
           use_count: number
           user_id: string
-          visit_count: number
-          visits_month: string | null
         }
         Insert: {
           additional_links?: Json | null
@@ -46,7 +43,6 @@ export type Database = {
           id?: string
           images?: Json | null
           is_public?: boolean
-          monthly_visit_count?: number
           public_slug?: string | null
           quote?: string | null
           source_name?: string
@@ -56,8 +52,6 @@ export type Database = {
           updated_at?: string
           use_count?: number
           user_id: string
-          visit_count?: number
-          visits_month?: string | null
         }
         Update: {
           additional_links?: Json | null
@@ -68,7 +62,6 @@ export type Database = {
           id?: string
           images?: Json | null
           is_public?: boolean
-          monthly_visit_count?: number
           public_slug?: string | null
           quote?: string | null
           source_name?: string
@@ -78,8 +71,6 @@ export type Database = {
           updated_at?: string
           use_count?: number
           user_id?: string
-          visit_count?: number
-          visits_month?: string | null
         }
         Relationships: []
       }
@@ -89,12 +80,6 @@ export type Database = {
     }
     Functions: {
       increment_use_count: { Args: { ficha_id: string }; Returns: number }
-      increment_visit_count:
-        | { Args: { ficha_slug: string }; Returns: undefined }
-        | {
-            Args: { ficha_slug: string; visitor_id?: string }
-            Returns: undefined
-          }
     }
     Enums: {
       [_ in never]: never

@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Ficha, useCreateFicha, useUpdateFicha } from "@/hooks/useFichas";
 import TiptapEditor from "@/components/TiptapEditor";
 
@@ -108,11 +108,9 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">
-            {editingFicha ? "Editar ficha" : "Nueva ficha"}
-          </DialogTitle>
-        </DialogHeader>
+        <DialogTitle className="sr-only">
+          {editingFicha ? "Editar ficha" : "Nueva ficha"}
+        </DialogTitle>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
