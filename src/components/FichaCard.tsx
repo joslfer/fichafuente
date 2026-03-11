@@ -172,16 +172,15 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
       {/* Content preview - preserving HTML structure */}
       <div className="mb-3 flex-1">
         {previewContent.type === "quote" ? (
-          <blockquote className="text-sm text-foreground/80 italic leading-relaxed border-l-2 border-primary pl-3 py-1 line-clamp-5">
+          <div className="text-sm text-foreground/80 leading-relaxed border-l-2 border-primary pl-3 py-1 line-clamp-5">
             {previewContent.text}
-          </blockquote>
+          </div>
         ) : previewContent.type === "highlight" ? (
           <div className="space-y-2">
-            <blockquote
+            <div
               className="ficha-content text-sm text-foreground/80 leading-relaxed border-l-2 border-primary pl-3 py-1 line-clamp-3"
               dangerouslySetInnerHTML={{ __html: previewContent.html || previewContent.text }}
-            >
-            </blockquote>
+            />
             {showSupportingSentence && (
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {supportingSentence}
