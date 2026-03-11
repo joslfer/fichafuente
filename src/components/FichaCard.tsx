@@ -160,7 +160,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
       </DropdownMenu>
 
       {/* Header */}
-      <div className="mb-3 pr-8">
+      <div className="mb-2 pr-8">
         <h3
           className="text-[15px] font-semibold leading-snug text-foreground cursor-pointer hover:text-primary transition-colors"
           onClick={handleClick}
@@ -192,11 +192,15 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
           <blockquote className="text-sm text-foreground/80 leading-relaxed border-l-2 border-primary pl-3 py-1 line-clamp-5">
             {previewContent.text}
           </blockquote>
-        ) : (
+        ) : plainContentText ? (
           <div
             className="text-sm text-muted-foreground leading-relaxed line-clamp-3 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0"
             dangerouslySetInnerHTML={{ __html: ficha.content || "" }}
           />
+        ) : (
+          <div className="flex items-center justify-center h-full py-4">
+            <span className="text-2xl text-muted-foreground/30 tracking-[0.3em] select-none">···</span>
+          </div>
         )}
       </div>
 

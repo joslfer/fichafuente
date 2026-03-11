@@ -48,7 +48,7 @@ const Index = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button onClick={handleNewFicha} size="sm" className="gap-1.5 h-8 text-xs font-medium">
+              <Button onClick={handleNewFicha} size="sm" className="gap-1.5 h-8 px-4 text-xs font-semibold shadow-sm ring-1 ring-primary/30 hover:ring-primary/60 hover:shadow-md hover:brightness-110 transition-all duration-150 active:scale-95">
                 <Plus className="w-3.5 h-3.5" />
                 Nueva ficha
               </Button>
