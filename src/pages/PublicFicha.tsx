@@ -7,12 +7,16 @@ import { Ficha } from "@/hooks/useFichas";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import DoiBadge from "@/components/DoiBadge";
+import { isDoiSourceUrl } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const PublicFicha = () => {
   const { slug } = useParams<{ slug: string }>();
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const isDoiSource = isDoiSourceUrl(ficha?.source_url);
 
 useEffect(() => {
     const load = async () => {
@@ -52,8 +56,41 @@ useEffect(() => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-2xl mx-auto px-4 py-12 space-y-8">
+          <Skeleton className="h-4 w-56" />
+
+          <article className="space-y-6">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-11/12" />
+              <Skeleton className="h-8 w-8/12" />
+            </div>
+
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-64" />
+              <Skeleton className="h-3 w-80" />
+            </div>
+
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-9/12" />
+            </div>
+
+            <Skeleton className="h-16 w-full" />
+
+            <div className="flex gap-1.5">
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-5 w-12 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+          </article>
+
+          <div className="flex justify-center">
+            <Skeleton className="h-11 w-52" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -76,25 +113,33 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-12">
-        <a href="/" className="inline-flex items-center gap-1 mb-8 text-muted-foreground hover:text-foreground transition-colors">
-          <span className="text-sm font-medium">
-            <span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span>
-            <span className="text-primary">fuente</span>
-          </span>
-          <span className="text-xs text-muted-foreground/90">· crea fichas con evidencia verificable</span>
-        </a>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-8">
+          <a href="/" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors min-w-0">
+            <span className="text-sm font-medium">
+              <span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span>
+              <span className="text-primary">fuente</span>
+            </span>
+            <span className="hidden sm:inline text-xs text-muted-foreground/90">· crea fichas con evidencia verificable</span>
+          </a>
+        </div>
 
         <article className="animate-fade-in space-y-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{ficha.title}</h1>
 
-          <div className="flex flex-col gap-1 pt-1">
+          <div className="flex flex-col gap-1 pt-1 min-w-0">
             {ficha.source_url ? (
-              <a href={ficha.source_url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary underline hover:text-primary/80 transition-colors">
-                {ficha.source_name}
-                <ExternalLink className="w-3.5 h-3.5 inline ml-1 -mt-0.5" />
-              </a>
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <a href={ficha.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-primary underline hover:text-primary/80 transition-colors min-w-0">
+                  <span className="truncate">{ficha.source_name}</span>
+                  <ExternalLink className="w-3.5 h-3.5 inline ml-1 -mt-0.5 shrink-0" />
+                </a>
+                {isDoiSource && <DoiBadge />}
+              </div>
             ) : (
-              <span className="text-sm font-medium text-foreground">{ficha.source_name}</span>
+              <div className="inline-flex items-center gap-2 min-w-0">
+                <span className="text-sm font-medium text-foreground truncate">{ficha.source_name}</span>
+                {isDoiSource && <DoiBadge />}
+              </div>
             )}
 
             {ficha.source_url && (
@@ -108,6 +153,13 @@ useEffect(() => {
               </a>
             )}
           </div>
+
+          {ficha.authors && ficha.authors.length > 0 && (
+            <div className="text-sm flex items-center gap-1.5 flex-wrap">
+              <span className="text-muted-foreground">Autores:</span>
+              <span className="text-foreground/85">{ficha.authors.join(", ")}</span>
+            </div>
+          )}
 
           <div
             className="text-[15px] leading-[1.45] text-foreground/90 ficha-content public-ficha-content font-[450]"
@@ -133,7 +185,7 @@ useEffect(() => {
           {ficha.tags && ficha.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {ficha.tags.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-badge text-badge-foreground">
+                <span key={tag} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-badge text-badge-foreground transition-all duration-100 hover:-translate-y-px hover:bg-badge/80">
                   <Hash className="w-2.5 h-2.5" />
                   {tag}
                 </span>

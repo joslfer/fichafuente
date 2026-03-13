@@ -22,6 +22,8 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   const [sourceUrl, setSourceUrl] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [authorsText, setAuthorsText] = useState("");
+  const [showAuthorsField, setShowAuthorsField] = useState(false);
 
   useEffect(() => {
     if (editingFicha) {
@@ -32,6 +34,9 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       setSourceName(editingFicha.source_name);
       setSourceUrl(editingFicha.source_url || "");
       setTags(editingFicha.tags || []);
+      setAuthorsText((editingFicha.authors || []).join(", "));
+      const hasAuthors = (editingFicha.authors || []).length > 0;
+      setShowAuthorsField(hasAuthors);
     } else {
       resetForm();
     }
@@ -43,6 +48,8 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
     setSourceUrl("");
     setTags([]);
     setTagsInput("");
+    setAuthorsText("");
+    setShowAuthorsField(false);
   };
 
   const handleAddTag = () => {
@@ -58,6 +65,18 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       e.preventDefault();
       handleAddTag();
     }
+  };
+
+  const normalizeAuthors = (input: string) => {
+    const uniqueAuthors = new Set<string>();
+
+    input
+      .split(/[\n,;]+/)
+      .map((author) => author.trim())
+      .filter(Boolean)
+      .forEach((author) => uniqueAuthors.add(author));
+
+    return Array.from(uniqueAuthors);
   };
 
   const parseHtml = (rawHtml: string) => {
@@ -88,6 +107,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       content,
       source_name: sourceName.trim(),
       source_url: sourceUrl.trim() || null,
+      authors: showAuthorsField ? normalizeAuthors(authorsText) : [],
       tags,
       is_public: true,
       public_slug: slug,
@@ -105,34 +125,95 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
 
   const { title } = parseHtml(html);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName.toLowerCase();
+      return target.isContentEditable || tag === "textarea" || tag === "select";
+    };
+
+    const handleEnterToSubmit = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" || event.defaultPrevented || event.isComposing) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (isTypingTarget(event.target)) return;
+
+      const activeElement = document.activeElement;
+      const isTextInput =
+        activeElement instanceof HTMLInputElement &&
+        activeElement.type !== "button" &&
+        activeElement.type !== "submit";
+
+      if (isTextInput) return;
+
+      if (!title || createFicha.isPending || updateFicha.isPending) return;
+
+      event.preventDefault();
+      const form = document.querySelector('form[data-ficha-form="true"]') as HTMLFormElement | null;
+      form?.requestSubmit();
+    };
+
+    window.addEventListener("keydown", handleEnterToSubmit);
+    return () => window.removeEventListener("keydown", handleEnterToSubmit);
+  }, [open, title, createFicha.isPending, updateFicha.isPending]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border-border/70">
         <DialogTitle className="sr-only">
           {editingFicha ? "Editar ficha" : "Nueva ficha"}
         </DialogTitle>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-ficha-form="true">
           <div>
             <Label className="text-xs font-medium text-muted-foreground">
               Contenido (la primera línea será el título)
             </Label>
             <div className="mt-1">
-              <TiptapEditor content={html} onChange={setHtml} />
+              <TiptapEditor
+                content={html}
+                onChange={setHtml}
+                placeholder="Título en la primera línea… Luego desarrolla el contenido"
+              />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="sourceName" className="text-xs font-medium text-muted-foreground">Fuente</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="sourceName" className="text-xs font-medium text-muted-foreground">Fuente</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-6 px-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+                onClick={() => setShowAuthorsField((prev) => !prev)}
+                title="Mostrar campo autores"
+              >
+                {showAuthorsField ? "Ocultar autores" : "Añadir autores"}
+              </Button>
+            </div>
             <textarea
               id="sourceName"
               value={sourceName}
               onChange={(e) => setSourceName(e.target.value)}
               placeholder="Nombre de la fuente"
               rows={2}
-              className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
             />
           </div>
+
+          {showAuthorsField && (
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground">Autores</Label>
+              <textarea
+                value={authorsText}
+                onChange={(e) => setAuthorsText(e.target.value)}
+                rows={2}
+                className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              />
+            </div>
+          )}
+
           <div>
             <Label htmlFor="sourceUrl" className="text-xs font-medium text-muted-foreground">Link de la fuente</Label>
             <textarea
@@ -141,7 +222,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               onChange={(e) => setSourceUrl(e.target.value)}
               placeholder="https://..."
               rows={2}
-              className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
             />
           </div>
 
@@ -166,18 +247,20 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               onChange={(e) => setTagsInput(e.target.value)}
               onKeyDown={handleTagKeyDown}
               onBlur={handleAddTag}
-              placeholder="Añadir tag y pulsar Enter"
-              className="text-sm"
+                placeholder="Añadir tag"
+              className="text-sm rounded-lg"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={!title}>
-              {editingFicha ? "Guardar" : "Crear ficha"}
-            </Button>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!title}>
+                {editingFicha ? "Guardar" : "Crear ficha"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

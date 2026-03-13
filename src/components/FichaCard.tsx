@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Hash, Calendar, MoreHorizontal, Trash2, Pencil, FileDown } from "lucide-react";
 import { exportFichaToPDF } from "@/lib/exportPDF";
 import { Ficha, useDeleteFicha } from "@/hooks/useFichas";
@@ -11,6 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import DoiBadge from "@/components/DoiBadge";
+import { isDoiSourceUrl } from "@/lib/utils";
 
 type FichaCardProps = {
   ficha: Ficha;
@@ -24,81 +27,35 @@ const highlightText = (text: string, query: string) => {
   const parts = text.split(regex);
   return parts.map((part, i) =>
     regex.test(part) ? (
-      <mark key={i} className="bg-primary/20 text-foreground rounded-sm px-0.5">{part}</mark>
+      <mark key={i} className="search-highlight">{part}</mark>
     ) : (
       part
     )
   );
 };
 
-const stripHtml = (html: string) => {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  return div.textContent || "";
-};
-
-const getFirstSentence = (text: string) => {
-  const cleaned = text.replace(/\s+/g, " ").trim();
-  if (!cleaned) return "";
-
-  const match = cleaned.match(/^[^.!?]+[.!?]/);
-  return match ? match[0].trim() : "";
-};
-
-type PreviewContent = {
-  type: "quote" | "highlight" | "strong" | "plain";
-  text: string;
-  html?: string;
-};
-
-const getPreviewContent = (ficha: Ficha): PreviewContent => {
-  const quoteText = ficha.quote?.trim();
-  if (quoteText) {
-    return { type: "quote", text: quoteText };
-  }
-
-  const contentHtml = ficha.content || "";
-  if (!contentHtml) {
-    return { type: "plain", text: "" };
-  }
+const hasMeaningfulContent = (html?: string | null) => {
+  if (!html) return false;
 
   const container = document.createElement("div");
-  container.innerHTML = contentHtml;
+  container.innerHTML = html;
 
-  const highlightedTexts = Array.from(container.querySelectorAll("mark"))
-    .map((mark) => mark.textContent?.trim() || "")
-    .filter(Boolean);
+  const text = (container.textContent || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\u200b/g, "")
+    .trim();
 
-  if (highlightedTexts.length > 0) {
-    const firstMark = container.querySelector("mark");
-    const closestBlock = firstMark?.closest("p, li, blockquote, div") as HTMLElement | null;
-    const snippetHtml = (closestBlock?.innerHTML || container.innerHTML || "").trim();
-    return {
-      type: "highlight",
-      text: highlightedTexts.join(" · "),
-      html: snippetHtml,
-    };
-  }
+  if (text.length > 0) return true;
 
-  const strongTexts = Array.from(container.querySelectorAll("strong"))
-    .map((el) => el.textContent?.trim() || "")
-    .filter(Boolean);
-
-  const underlineTexts = Array.from(container.querySelectorAll("u"))
-    .map((el) => el.textContent?.trim() || "")
-    .filter(Boolean);
-
-  const emphasizedTexts = strongTexts.length > 0 ? strongTexts : underlineTexts;
-
-  if (emphasizedTexts.length > 0) {
-    return { type: "strong", text: emphasizedTexts.slice(0, 2).join(" · ") };
-  }
-
-  return { type: "plain", text: contentHtml };
+  return Boolean(container.querySelector("img, video, iframe, table, hr, pre"));
 };
 
 const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
   const deleteFicha = useDeleteFicha();
+  const previewViewportRef = useRef<HTMLDivElement>(null);
+  const previewContentRef = useRef<HTMLDivElement>(null);
+  const [previewOffset, setPreviewOffset] = useState(0);
+  const [maxPreviewOffset, setMaxPreviewOffset] = useState(0);
 
   const handleClick = () => {
     if (ficha.public_slug) {
@@ -110,36 +67,73 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
     deleteFicha.mutate(ficha.id);
   };
 
-  const previewContent = getPreviewContent(ficha);
-  const plainContentText = stripHtml(ficha.content || "").replace(/\s+/g, " ").trim();
-  const highlightPreviewText =
-    previewContent.type === "highlight"
-      ? stripHtml(previewContent.html || previewContent.text).replace(/\s+/g, " ").trim()
-      : "";
-  const contentWithoutHighlight =
-    highlightPreviewText && plainContentText.includes(highlightPreviewText)
-      ? plainContentText.replace(highlightPreviewText, "").trim()
-      : plainContentText;
-  const supportingSentence = getFirstSentence(contentWithoutHighlight);
-  const showSupportingSentence =
-    previewContent.type === "highlight" &&
-    highlightPreviewText.length > 0 &&
-    highlightPreviewText.length <= 160 &&
-    supportingSentence.length >= 25 &&
-    supportingSentence.length <= 85 &&
-    /[.!?]$/.test(supportingSentence);
+  const hasContent = hasMeaningfulContent(ficha.content);
+  const isDoiSource = isDoiSourceUrl(ficha.source_url);
+
+  useEffect(() => {
+    if (!hasContent || !previewViewportRef.current || !previewContentRef.current) {
+      setPreviewOffset(0);
+      setMaxPreviewOffset(0);
+      return;
+    }
+
+    const viewport = previewViewportRef.current;
+    const content = previewContentRef.current;
+
+    const updatePreviewPosition = () => {
+      const viewportHeight = viewport.clientHeight;
+      const contentHeight = content.scrollHeight;
+      const maxOffset = Math.max(contentHeight - viewportHeight, 0);
+      setMaxPreviewOffset(maxOffset);
+
+      if (maxOffset <= 0) {
+        setPreviewOffset(0);
+        return;
+      }
+
+      const marks = Array.from(content.querySelectorAll("mark"));
+      if (marks.length === 0) {
+        setPreviewOffset(0);
+        return;
+      }
+
+      const contentRect = content.getBoundingClientRect();
+      const markCenters = marks.map((mark) => {
+        const rect = mark.getBoundingClientRect();
+        return rect.top - contentRect.top + rect.height / 2;
+      });
+
+      const centerOfInterest = markCenters.reduce((sum, center) => sum + center, 0) / markCenters.length;
+      const desiredOffset = centerOfInterest - viewportHeight / 2;
+      const clampedOffset = Math.min(Math.max(desiredOffset, 0), maxOffset);
+      setPreviewOffset(clampedOffset);
+    };
+
+    const frame = requestAnimationFrame(updatePreviewPosition);
+    const observer = new ResizeObserver(updatePreviewPosition);
+    observer.observe(viewport);
+    observer.observe(content);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [ficha.content, hasContent]);
+
+  const showTopFog = previewOffset > 2;
+  const showBottomFog = previewOffset < maxPreviewOffset - 2;
 
   
 
   return (
     <article
-      className="group relative bg-card rounded-lg border border-border/60 p-5 shadow-sm hover:shadow-md hover:border-border transition-all duration-200 animate-fade-in flex flex-col min-h-[280px]"    >
+      className="group relative bg-card rounded-lg border border-border/60 p-5 shadow-sm hover:shadow-md hover:border-border transition-all duration-200 flex flex-col min-h-[280px]"    >
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            className="absolute top-4 right-4 h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="w-4 h-4" />
@@ -171,64 +165,56 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
 
       {/* Content preview - preserving HTML structure */}
       <div className="mb-3 flex-1">
-        {previewContent.type === "quote" ? (
-          <div className="text-sm text-foreground/80 leading-relaxed border-l-2 border-primary pl-3 py-1 line-clamp-5">
-            {previewContent.text}
-          </div>
-        ) : previewContent.type === "highlight" ? (
-          <div className="space-y-2">
+        {hasContent ? (
+          <div ref={previewViewportRef} className="relative h-28 overflow-hidden">
             <div
-              className="ficha-content text-sm text-foreground/80 leading-relaxed border-l-2 border-primary pl-3 py-1 line-clamp-3"
-              dangerouslySetInnerHTML={{ __html: previewContent.html || previewContent.text }}
+              ref={previewContentRef}
+              className="ficha-preview-content text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 transition-transform duration-300"
+              style={{ transform: `translateY(-${previewOffset}px)` }}
+              dangerouslySetInnerHTML={{ __html: ficha.content || "" }}
             />
-            {showSupportingSentence && (
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {supportingSentence}
-              </p>
+            {showTopFog && (
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-card to-transparent" />
+            )}
+            {showBottomFog && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
             )}
           </div>
-        ) : previewContent.type === "strong" ? (
-          <blockquote className="text-sm text-foreground/80 leading-relaxed border-l-2 border-primary pl-3 py-1 line-clamp-5">
-            {previewContent.text}
-          </blockquote>
-        ) : plainContentText ? (
-          <div
-            className="text-sm text-muted-foreground leading-relaxed line-clamp-3 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0"
-            dangerouslySetInnerHTML={{ __html: ficha.content || "" }}
-          />
         ) : (
           <div className="flex items-center justify-center h-full py-4">
-            <span className="text-2xl text-muted-foreground/30 tracking-[0.3em] select-none">···</span>
+            <span className="ficha-empty-dots text-2xl text-muted-foreground/30 tracking-[0.18em] select-none" aria-hidden="true">
+              <span className="ficha-empty-dot">·</span>
+              <span className="ficha-empty-dot">·</span>
+              <span className="ficha-empty-dot">·</span>
+            </span>
           </div>
         )}
       </div>
 
-      {/* "Ver más" button */}
-      <button
-        onClick={handleClick}
-        className="text-xs font-medium text-primary hover:text-primary/80 transition-colors mb-3 flex items-center gap-0.5"
-      >
-        Ver más &gt;
-      </button>
-
       {/* Source */}
       {ficha.source_name && (
-        <div className="flex items-center gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 mb-3 min-w-0">
           {ficha.source_url ? (
-            <a
-              href={ficha.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition-colors truncate"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {highlightText(ficha.source_name, searchQuery || "")}
-              <ExternalLink className="w-3 h-3 inline ml-1 -mt-0.5" />
-            </a>
+            <div className="flex items-center gap-2 min-w-0 w-full">
+              <a
+                href={ficha.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 min-w-0 text-sm font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="truncate">{highlightText(ficha.source_name, searchQuery || "")}</span>
+                <ExternalLink className="w-3 h-3 inline ml-1 -mt-0.5 shrink-0" />
+              </a>
+              {isDoiSource && <div className="shrink-0"><DoiBadge /></div>}
+            </div>
           ) : (
-            <span className="text-sm font-semibold text-foreground/90 truncate">
-              {highlightText(ficha.source_name, searchQuery || "")}
-            </span>
+            <div className="flex items-center gap-2 min-w-0 w-full">
+              <span className="text-sm font-semibold text-foreground/90 truncate min-w-0">
+                {highlightText(ficha.source_name, searchQuery || "")}
+              </span>
+              {isDoiSource && <div className="shrink-0"><DoiBadge /></div>}
+            </div>
           )}
         </div>
       )}
@@ -239,7 +225,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
           {ficha.tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-badge text-badge-foreground transition-colors hover:bg-badge/80"
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-badge text-badge-foreground transition-all duration-100 hover:bg-badge/80 hover:-translate-y-px"
             >
               <Hash className="w-2.5 h-2.5" />
               {tag}
@@ -249,7 +235,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
       )}
 
       {/* Footer */}
-      <div className="flex items-center gap-3 pt-3 border-t border-border/40 text-[11px] text-muted-foreground">
+      <div className="flex items-center gap-3 pt-1 text-[11px] text-muted-foreground">
         {ficha.data_date && (
           <span className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />

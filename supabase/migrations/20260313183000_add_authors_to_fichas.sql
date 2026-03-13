@@ -1,0 +1,2 @@
+ALTER TABLE public.fichas
+ADD COLUMN IF NOT EXISTS authors TEXT[] NOT NULL DEFAULT '{}';

@@ -17,6 +17,7 @@ export type Database = {
       fichas: {
         Row: {
           additional_links: Json | null
+          authors: string[]
           archived_at: string | null
           content: string
           created_at: string
@@ -36,6 +37,7 @@ export type Database = {
         }
         Insert: {
           additional_links?: Json | null
+          authors?: string[]
           archived_at?: string | null
           content?: string
           created_at?: string
@@ -55,6 +57,7 @@ export type Database = {
         }
         Update: {
           additional_links?: Json | null
+          authors?: string[]
           archived_at?: string | null
           content?: string
           created_at?: string

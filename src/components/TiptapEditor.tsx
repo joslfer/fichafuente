@@ -12,10 +12,10 @@ type TiptapEditorProps = {
   placeholder?: string;
 };
 
-const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => {
+const TiptapEditor = ({ content, onChange }: TiptapEditorProps) => {
   const editor = useEditor({
     extensions: [
-        StarterKit.configure({
+      StarterKit.configure({
         orderedList: {
           HTMLAttributes: { class: "list-decimal pl-5" },
         },
@@ -28,9 +28,9 @@ const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => 
         heading: false,
       }),
       Underline,
-        Highlight.configure({
-      HTMLAttributes: { class: "bg-yellow-200 dark:bg-yellow-800 rounded-sm px-0.5" },
-}),
+      Highlight.configure({
+        HTMLAttributes: { class: "bg-yellow-200 dark:bg-yellow-800 rounded-sm px-0.5" },
+      }),
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -38,7 +38,7 @@ const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => 
     },
     editorProps: {
       attributes: {
-        class: "min-h-[200px] w-full px-3 py-2 text-sm focus:outline-none prose prose-sm max-w-none",
+        class: "ficha-editor-content min-h-[200px] w-full px-3 py-2 text-sm focus:outline-none",
       },
     },
   });
@@ -67,7 +67,7 @@ const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => 
       title={title}
       onClick={onClick}
       className={cn(
-        "h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
+        "h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
         active && "bg-accent text-foreground"
       )}
     >
@@ -76,9 +76,18 @@ const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => 
   );
 
   return (
-    <div className="rounded-lg border border-input bg-background overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/30 flex-wrap">
+    <div className="rounded-2xl border border-input bg-card overflow-hidden">
+      <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-border bg-muted/20 flex-wrap">
+        <ToolBtn title="Lista" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <List className="w-3.5 h-3.5" />
+        </ToolBtn>
+        <ToolBtn title="Lista numerada" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <ListOrdered className="w-3.5 h-3.5" />
+        </ToolBtn>
+        <ToolBtn title="Cita" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+          <Quote className="w-3.5 h-3.5" />
+        </ToolBtn>
+        <div className="w-px h-4 bg-border mx-1" />
         <ToolBtn title="Negrita" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
           <Bold className="w-3.5 h-3.5" />
         </ToolBtn>
@@ -91,27 +100,10 @@ const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => 
         <ToolBtn title="Tachado" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
           <Strikethrough className="w-3.5 h-3.5" />
         </ToolBtn>
-
-        <div className="w-px h-4 bg-border mx-1" />
-
-<ToolBtn title="Resaltar" active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleHighlight().run()}>
-  <Highlighter className="w-3.5 h-3.5" />
-</ToolBtn>
-        <ToolBtn title="Lista" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          <List className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Lista numerada" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-          <ListOrdered className="w-3.5 h-3.5" />
-        </ToolBtn>
-
-        <div className="w-px h-4 bg-border mx-1" />
-
-        <ToolBtn title="Cita" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-          <Quote className="w-3.5 h-3.5" />
+        <ToolBtn title="Resaltar" active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleHighlight().run()}>
+          <Highlighter className="w-3.5 h-3.5" />
         </ToolBtn>
       </div>
-
-      {/* Editor */}
       <EditorContent editor={editor} />
     </div>
   );
