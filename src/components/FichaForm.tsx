@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Ficha, useCreateFicha, useUpdateFicha } from "@/hooks/useFichas";
 import TiptapEditor from "@/components/TiptapEditor";
+import { normalizeTag, normalizeTags } from "@/lib/utils";
 
 type FichaFormProps = {
   open: boolean;
@@ -33,7 +34,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       setHtml(fullHtml);
       setSourceName(editingFicha.source_name);
       setSourceUrl(editingFicha.source_url || "");
-      setTags(editingFicha.tags || []);
+      setTags(normalizeTags(editingFicha.tags));
       setAuthorsText((editingFicha.authors || []).join(", "));
       const hasAuthors = (editingFicha.authors || []).length > 0;
       setShowAuthorsField(hasAuthors);
@@ -53,7 +54,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   };
 
   const handleAddTag = () => {
-    const tag = tagsInput.trim().toLowerCase();
+    const tag = normalizeTag(tagsInput);
     if (tag && !tags.includes(tag)) {
       setTags([...tags, tag]);
       setTagsInput("");
@@ -108,7 +109,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       source_name: sourceName.trim(),
       source_url: sourceUrl.trim() || null,
       authors: showAuthorsField ? normalizeAuthors(authorsText) : [],
-      tags,
+      tags: normalizeTags(tags),
       is_public: true,
       public_slug: slug,
     };
@@ -189,7 +190,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
                 onClick={() => setShowAuthorsField((prev) => !prev)}
                 title="Mostrar campo autores"
               >
-                {showAuthorsField ? "Ocultar autores" : "Añadir autores"}
+                {showAuthorsField ? "Ocultar autores" : "(+ añadir autores)"}
               </Button>
             </div>
             <textarea

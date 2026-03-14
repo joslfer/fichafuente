@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import DoiBadge from "@/components/DoiBadge";
-import { isDoiSourceUrl } from "@/lib/utils";
+import { isDoiSourceUrl, normalizeTags } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const PublicFicha = () => {
@@ -33,7 +33,10 @@ useEffect(() => {
       if (error || !data) {
         setNotFound(true);
       } else {
-        setFicha(data);
+        setFicha({
+          ...data,
+          tags: normalizeTags(data.tags),
+        });
       }
       setLoading(false);
     };

@@ -8,6 +8,7 @@ import FichaCard from "@/components/FichaCard";
 import FichaForm from "@/components/FichaForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import AmbientKnowledgeGraph from "@/components/AmbientKnowledgeGraph";
+import { normalizeTag } from "@/lib/utils";
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -111,15 +112,19 @@ const Index = () => {
   };
 
   const addTagFilter = (tag: string) => {
+    const normalizedTag = normalizeTag(tag);
+    if (!normalizedTag) return;
+
     setTagFilters((prev) => {
-      if (prev.includes(tag)) return prev;
+      if (prev.includes(normalizedTag)) return prev;
       if (prev.length >= 2) return prev;
-      return [...prev, tag];
+      return [...prev, normalizedTag];
     });
   };
 
   const removeTagFilter = (tag: string) => {
-    setTagFilters((prev) => prev.filter((t) => t !== tag));
+    const normalizedTag = normalizeTag(tag);
+    setTagFilters((prev) => prev.filter((t) => t !== normalizedTag));
   };
 
   const triggerSearchIconAnimation = () => {

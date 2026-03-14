@@ -166,7 +166,11 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
       {/* Content preview - preserving HTML structure */}
       <div className="mb-3 flex-1">
         {hasContent ? (
-          <div ref={previewViewportRef} className="relative h-28 overflow-hidden">
+          <div
+            ref={previewViewportRef}
+            className="relative h-28 overflow-hidden cursor-pointer"
+            onClick={handleClick}
+          >
             <div
               ref={previewContentRef}
               className="ficha-preview-content text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 transition-transform duration-300"

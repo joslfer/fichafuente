@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { normalizeTags } from "@/lib/utils";
 
 export type Ficha = Tables<"fichas">;
 export type FichaInsert = TablesInsert<"fichas">;
@@ -23,11 +24,29 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+const haveSameTags = (currentTags?: string[] | null, normalizedTags: string[] = []) => {
+  if (!currentTags || currentTags.length === 0) {
+    return normalizedTags.length === 0;
+  }
+
+  if (currentTags.length !== normalizedTags.length) {
+    return false;
+  }
+
+  return currentTags.every((tag, index) => tag === normalizedTags[index]);
+};
+
+const normalizeOptionalTags = (tags?: string[] | null) => {
+  if (tags == null) return tags;
+  return normalizeTags(tags);
+};
+
 export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
   const { user } = useAuth();
+  const normalizedTagFilters = normalizeTags(tagFilters);
 
   return useQuery({
-    queryKey: ["fichas", user?.id, searchQuery, tagFilters],
+    queryKey: ["fichas", user?.id, searchQuery, normalizedTagFilters],
     queryFn: async () => {
       let query = supabase
         .from("fichas")
@@ -39,13 +58,37 @@ export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
         query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%,source_name.ilike.%${searchQuery}%,quote.ilike.%${searchQuery}%`);
       }
 
-      if (tagFilters.length > 0) {
-        query = query.contains("tags", tagFilters);
-      }
-
       const { data, error } = await query;
       if (error) throw error;
-      return data as Ficha[];
+
+      const fichas = (data as Ficha[]) ?? [];
+      const normalizedFichas = fichas.map((ficha) => ({
+        ...ficha,
+        tags: normalizeTags(ficha.tags),
+      }));
+
+      const fichasToNormalize = normalizedFichas.filter((ficha, index) => !haveSameTags(fichas[index]?.tags, ficha.tags ?? []));
+
+      if (fichasToNormalize.length > 0 && user) {
+        void Promise.allSettled(
+          fichasToNormalize.map((ficha) =>
+            supabase
+              .from("fichas")
+              .update({ tags: ficha.tags ?? [] })
+              .eq("id", ficha.id)
+              .eq("user_id", user.id)
+          )
+        );
+      }
+
+      if (normalizedTagFilters.length === 0) {
+        return normalizedFichas;
+      }
+
+      return normalizedFichas.filter((ficha) => {
+        const fichaTags = new Set(ficha.tags ?? []);
+        return normalizedTagFilters.every((tag) => fichaTags.has(tag));
+      });
     },
     enabled: !!user,
   });
@@ -57,9 +100,14 @@ export const useCreateFicha = () => {
 
   return useMutation({
     mutationFn: async (ficha: Omit<FichaInsert, "user_id">) => {
+      const payload = {
+        ...ficha,
+        tags: normalizeOptionalTags(ficha.tags),
+      };
+
       const { data, error } = await supabase
         .from("fichas")
-        .insert({ ...ficha, user_id: user!.id })
+        .insert({ ...payload, user_id: user!.id })
         .select()
         .single();
       if (error) throw error;
@@ -85,9 +133,14 @@ export const useUpdateFicha = () => {
         throw new Error("Sesión no válida");
       }
 
+      const payload = {
+        ...updates,
+        tags: normalizeOptionalTags(updates.tags),
+      };
+
       const { data, error } = await supabase
         .from("fichas")
-        .update(updates)
+        .update(payload)
         .eq("id", id)
         .eq("user_id", user.id)
         .select()

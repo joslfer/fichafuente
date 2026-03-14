@@ -5,6 +5,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function normalizeTag(tag: string) {
+  return tag
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+export function normalizeTags(tags?: string[] | null) {
+  if (!tags) return [];
+
+  const uniqueTags = new Set<string>();
+
+  tags.forEach((tag) => {
+    const normalizedTag = normalizeTag(tag);
+    if (normalizedTag) {
+      uniqueTags.add(normalizedTag);
+    }
+  });
+
+  return Array.from(uniqueTags);
+}
+
 export function isDoiSourceUrl(url?: string | null) {
   if (!url) return false;
 

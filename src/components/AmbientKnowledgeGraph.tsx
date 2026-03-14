@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { normalizeTags } from "@/lib/utils";
 
 type GraphItem = {
   tags?: string[] | null;
@@ -77,11 +78,11 @@ const AmbientKnowledgeGraph = ({
     let maxSharedTags = 1;
 
     for (let i = 0; i < count; i += 1) {
-      const tagsA = new Set((items[i].tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean));
+      const tagsA = new Set(normalizeTags(items[i].tags));
       if (tagsA.size === 0) continue;
 
       for (let j = i + 1; j < count; j += 1) {
-        const tagsB = new Set((items[j].tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean));
+        const tagsB = new Set(normalizeTags(items[j].tags));
         const sharedTags = Array.from(tagsA).reduce((total, tag) => total + (tagsB.has(tag) ? 1 : 0), 0);
 
         if (sharedTags > 0) {
