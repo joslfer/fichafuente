@@ -13,7 +13,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import DoiBadge from "@/components/DoiBadge";
-import { isDoiSourceUrl } from "@/lib/utils";
+import { isArchivedTag, isDoiSourceUrl, orderTagsForDisplay } from "@/lib/utils";
 
 type FichaCardProps = {
   ficha: Ficha;
@@ -56,9 +56,12 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
   const previewContentRef = useRef<HTMLDivElement>(null);
   const [previewOffset, setPreviewOffset] = useState(0);
   const [maxPreviewOffset, setMaxPreviewOffset] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isArchived = Boolean(ficha.archived_at);
+  const canOpenPublicPreview = Boolean(ficha.public_slug) && !isArchived;
 
   const handleClick = () => {
-    if (ficha.public_slug) {
+    if (canOpenPublicPreview) {
       window.open(`${window.location.origin}/f/${ficha.public_slug}`, "_blank");
     }
   };
@@ -69,6 +72,15 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
 
   const hasContent = hasMeaningfulContent(ficha.content);
   const isDoiSource = isDoiSourceUrl(ficha.source_url);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const closeMenu = () => setMenuOpen(false);
+
+    window.addEventListener("scroll", closeMenu, true);
+    return () => window.removeEventListener("scroll", closeMenu, true);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!hasContent || !previewViewportRef.current || !previewContentRef.current) {
@@ -128,7 +140,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
   return (
     <article
       className="group relative bg-card rounded-lg border border-border/60 p-5 shadow-sm hover:shadow-md hover:border-border transition-all duration-200 flex flex-col min-h-[280px]"    >
-      <DropdownMenu modal={false}>
+      <DropdownMenu modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -156,8 +168,10 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
       {/* Header */}
       <div className="mb-2 pr-8">
         <h3
-          className="text-[15px] font-semibold leading-snug text-foreground cursor-pointer hover:text-primary transition-colors"
-          onClick={handleClick}
+          className={`text-[15px] font-semibold leading-snug transition-colors ${
+            canOpenPublicPreview ? "text-foreground cursor-pointer hover:text-primary" : "text-foreground"
+          }`}
+          onClick={canOpenPublicPreview ? handleClick : undefined}
         >
           {highlightText(ficha.title, searchQuery || "")}
         </h3>
@@ -168,8 +182,8 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
         {hasContent ? (
           <div
             ref={previewViewportRef}
-            className="relative h-28 overflow-hidden cursor-pointer"
-            onClick={handleClick}
+            className={`relative h-28 overflow-hidden ${canOpenPublicPreview ? "cursor-pointer" : ""}`}
+            onClick={canOpenPublicPreview ? handleClick : undefined}
           >
             <div
               ref={previewContentRef}
@@ -225,11 +239,15 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
 
       {/* Tags */}
       {ficha.tags && ficha.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {ficha.tags.map((tag) => (
+        <div className="flex flex-wrap gap-1.5 mb-3 justify-start">
+          {orderTagsForDisplay(ficha.tags).map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-badge text-badge-foreground transition-all duration-100 hover:bg-badge/80 hover:-translate-y-px"
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-100 hover:-translate-y-px ${
+                isArchivedTag(tag)
+                  ? "ml-auto bg-secondary text-foreground/80 border border-border hover:bg-secondary/90"
+                  : "bg-badge text-badge-foreground hover:bg-badge/80"
+              }`}
             >
               <Hash className="w-2.5 h-2.5" />
               {tag}

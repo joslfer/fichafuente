@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { normalizeTags } from "@/lib/utils";
+import { ARCHIVED_TAG, normalizeTags } from "@/lib/utils";
 
 export type Ficha = Tables<"fichas">;
 export type FichaInsert = TablesInsert<"fichas">;
@@ -36,9 +36,22 @@ const haveSameTags = (currentTags?: string[] | null, normalizedTags: string[] = 
   return currentTags.every((tag, index) => tag === normalizedTags[index]);
 };
 
-const normalizeOptionalTags = (tags?: string[] | null) => {
-  if (tags == null) return tags;
-  return normalizeTags(tags);
+const syncArchivedState = <T extends { tags?: string[] | null; archived_at?: string | null; updated_at?: string }>(ficha: T) => {
+  const normalizedTags = normalizeTags(ficha.tags);
+  const isArchived = ficha.archived_at != null || normalizedTags.includes(ARCHIVED_TAG);
+  const tags = isArchived
+    ? [...normalizedTags.filter((tag) => tag !== ARCHIVED_TAG), ARCHIVED_TAG]
+    : normalizedTags.filter((tag) => tag !== ARCHIVED_TAG);
+
+  return {
+    ...ficha,
+    tags,
+    archived_at: isArchived ? ficha.archived_at ?? ficha.updated_at ?? new Date().toISOString() : null,
+  };
+};
+
+const isArchiveStateSynced = (currentFicha: Ficha, nextFicha: Ficha) => {
+  return haveSameTags(currentFicha.tags, nextFicha.tags ?? []) && currentFicha.archived_at === nextFicha.archived_at;
 };
 
 export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
@@ -62,19 +75,16 @@ export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
       if (error) throw error;
 
       const fichas = (data as Ficha[]) ?? [];
-      const normalizedFichas = fichas.map((ficha) => ({
-        ...ficha,
-        tags: normalizeTags(ficha.tags),
-      }));
+      const normalizedFichas = fichas.map((ficha) => syncArchivedState(ficha));
 
-      const fichasToNormalize = normalizedFichas.filter((ficha, index) => !haveSameTags(fichas[index]?.tags, ficha.tags ?? []));
+      const fichasToNormalize = normalizedFichas.filter((ficha, index) => !isArchiveStateSynced(fichas[index], ficha));
 
       if (fichasToNormalize.length > 0 && user) {
         void Promise.allSettled(
           fichasToNormalize.map((ficha) =>
             supabase
               .from("fichas")
-              .update({ tags: ficha.tags ?? [] })
+              .update({ tags: ficha.tags ?? [], archived_at: ficha.archived_at })
               .eq("id", ficha.id)
               .eq("user_id", user.id)
           )
@@ -100,10 +110,7 @@ export const useCreateFicha = () => {
 
   return useMutation({
     mutationFn: async (ficha: Omit<FichaInsert, "user_id">) => {
-      const payload = {
-        ...ficha,
-        tags: normalizeOptionalTags(ficha.tags),
-      };
+      const payload = syncArchivedState(ficha);
 
       const { data, error } = await supabase
         .from("fichas")
@@ -133,10 +140,7 @@ export const useUpdateFicha = () => {
         throw new Error("Sesión no válida");
       }
 
-      const payload = {
-        ...updates,
-        tags: normalizeOptionalTags(updates.tags),
-      };
+      const payload = syncArchivedState(updates);
 
       const { data, error } = await supabase
         .from("fichas")

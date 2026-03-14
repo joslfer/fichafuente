@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Ficha, useCreateFicha, useUpdateFicha } from "@/hooks/useFichas";
 import TiptapEditor from "@/components/TiptapEditor";
-import { normalizeTag, normalizeTags } from "@/lib/utils";
+import { isArchivedTag, normalizeTag, normalizeTags, orderTagsForDisplay } from "@/lib/utils";
 
 type FichaFormProps = {
   open: boolean;
@@ -231,10 +231,14 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
           <div>
             <Label className="text-xs font-medium text-muted-foreground">Tags</Label>
             <div className="flex flex-wrap gap-1.5 mt-1 mb-2">
-              {tags.map((tag) => (
+              {orderTagsForDisplay(tags).map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-badge text-badge-foreground"
+                  className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                    isArchivedTag(tag)
+                      ? "bg-muted text-muted-foreground border border-border"
+                      : "bg-badge text-badge-foreground"
+                  }`}
                 >
                   {tag}
                   <button type="button" onClick={() => setTags(tags.filter((t) => t !== tag))}>

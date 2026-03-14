@@ -14,6 +14,8 @@ export function normalizeTag(tag: string) {
     .replace(/\s+/g, " ");
 }
 
+export const ARCHIVED_TAG = "archivado";
+
 export function normalizeTags(tags?: string[] | null) {
   if (!tags) return [];
 
@@ -27,6 +29,18 @@ export function normalizeTags(tags?: string[] | null) {
   });
 
   return Array.from(uniqueTags);
+}
+
+export function isArchivedTag(tag: string) {
+  return normalizeTag(tag) === ARCHIVED_TAG;
+}
+
+export function orderTagsForDisplay(tags?: string[] | null) {
+  const uniqueTags = Array.from(new Set((tags ?? []).filter(Boolean)));
+  const regularTags = uniqueTags.filter((tag) => !isArchivedTag(tag));
+  const archivedTags = uniqueTags.filter((tag) => isArchivedTag(tag));
+
+  return [...regularTags, ...archivedTags];
 }
 
 export function isDoiSourceUrl(url?: string | null) {

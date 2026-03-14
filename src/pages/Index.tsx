@@ -8,7 +8,7 @@ import FichaCard from "@/components/FichaCard";
 import FichaForm from "@/components/FichaForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import AmbientKnowledgeGraph from "@/components/AmbientKnowledgeGraph";
-import { normalizeTag } from "@/lib/utils";
+import { ARCHIVED_TAG, isArchivedTag, normalizeTag } from "@/lib/utils";
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -21,13 +21,30 @@ const Index = () => {
   const [editingFicha, setEditingFicha] = useState<Ficha | null>(null);
 
   const { data: fichas, isLoading } = useFichas(searchQuery, tagFilters);
+  const viewingArchived = tagFilters.includes(ARCHIVED_TAG);
+
+  const activeFichas = useMemo(
+    () => (fichas ?? []).filter((ficha) => !(ficha.tags ?? []).includes(ARCHIVED_TAG)),
+    [fichas]
+  );
+
+  const archivedFichas = useMemo(
+    () => (fichas ?? []).filter((ficha) => (ficha.tags ?? []).includes(ARCHIVED_TAG)),
+    [fichas]
+  );
+
+  const visibleFichas = viewingArchived ? archivedFichas : activeFichas;
 
   // Collect all unique tags
   const allTags = useMemo(() => {
     if (!fichas) return [];
     const tagSet = new Set<string>();
     fichas.forEach((f) => f.tags?.forEach((t) => tagSet.add(t)));
-    return Array.from(tagSet).sort();
+    return Array.from(tagSet).sort((a, b) => {
+      if (a === ARCHIVED_TAG) return 1;
+      if (b === ARCHIVED_TAG) return -1;
+      return a.localeCompare(b);
+    });
   }, [fichas]);
 
   const monthlyCardsStats = useMemo(() => {
@@ -38,7 +55,7 @@ const Index = () => {
     let currentMonth = 0;
     let previousMonth = 0;
 
-    (fichas ?? []).forEach((ficha) => {
+    activeFichas.forEach((ficha) => {
       const createdAt = new Date(ficha.created_at);
       if (Number.isNaN(createdAt.getTime())) return;
 
@@ -57,7 +74,7 @@ const Index = () => {
       previousMonth,
       delta: currentMonth - previousMonth,
     };
-  }, [fichas]);
+  }, [activeFichas]);
 
   const currentMonthLabel = useMemo(() => {
     return new Intl.DateTimeFormat("es-ES", { month: "long" }).format(new Date()).toLowerCase();
@@ -90,8 +107,8 @@ const Index = () => {
   }, [monthlyCardsStats.currentMonth, isLoading]);
 
   const graphItems = useMemo(
-    () => (fichas ?? []).map((ficha) => ({ tags: ficha.tags ?? [] })),
-    [fichas]
+    () => activeFichas.map((ficha) => ({ tags: ficha.tags ?? [] })),
+    [activeFichas]
   );
 
   const handleEdit = (ficha: Ficha) => {
@@ -245,7 +262,11 @@ const Index = () => {
               <button
                 key={selectedTag}
                 onClick={() => removeTagFilter(selectedTag)}
-                className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary text-primary-foreground animate-tag-in transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:brightness-110 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-primary/40 active:translate-y-0 active:scale-[0.96]"
+                className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] ${
+                  isArchivedTag(selectedTag)
+                    ? "bg-secondary text-foreground/80 border border-border hover:bg-secondary/90 hover:ring-border"
+                    : "bg-primary text-primary-foreground hover:brightness-110 hover:ring-primary/40"
+                }`}
                 style={{ animationDelay: `${selectedIndex * 24}ms`, animationFillMode: "both" }}
               >
                 {selectedTag}
@@ -259,7 +280,11 @@ const Index = () => {
                   key={tag}
                   onClick={() => addTagFilter(tag)}
                   disabled={maxTagsReached}
-                  className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-badge text-badge-foreground animate-tag-in hover:bg-badge/80 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-primary/35 active:translate-y-0 active:scale-[0.96] transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none ${
+                    isArchivedTag(tag)
+                      ? "bg-secondary text-foreground/80 border border-border hover:bg-secondary/90 hover:ring-border"
+                      : "bg-badge text-badge-foreground hover:bg-badge/80 hover:ring-primary/35"
+                  }`}
                   style={{ animationDelay: `${Math.min(index * 32, 224)}ms`, animationFillMode: "both" }}
                 >
                   {tag}
@@ -270,7 +295,6 @@ const Index = () => {
             )}
           </div>
         )}
- {/* Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -303,11 +327,11 @@ const Index = () => {
               </article>
             ))}
           </div>
-        ) : fichas && fichas.length > 0 ? (
+        ) : visibleFichas.length > 0 ? (
           <div
-            className={`grid grid-cols-1 sm:grid-cols-2 ${fichas.length < 3 ? "lg:grid-cols-2" : "lg:grid-cols-3"} gap-5`}
+            className={`grid grid-cols-1 sm:grid-cols-2 ${visibleFichas.length < 3 ? "lg:grid-cols-2" : "lg:grid-cols-3"} gap-5`}
           >
-            {fichas.map((ficha) => (
+            {visibleFichas.map((ficha) => (
               <FichaCard key={ficha.id} ficha={ficha} onEdit={handleEdit} searchQuery={searchQuery} />
             ))}
           </div>
@@ -315,7 +339,11 @@ const Index = () => {
           <div className="text-center py-20 space-y-3">
             <FileText className="w-10 h-10 mx-auto text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">
-              {searchQuery || tagFilters.length > 0 ? "No se encontraron fichas" : "Aún no tienes fichas"}
+              {viewingArchived
+                ? "No se encontraron fichas archivadas"
+                : searchQuery || tagFilters.length > 0
+                  ? "No se encontraron fichas activas"
+                  : "Aún no tienes fichas"}
             </p>
             {!searchQuery && tagFilters.length === 0 && (
               <Button onClick={handleNewFicha} variant="outline" size="sm" className="gap-1.5">
@@ -330,12 +358,12 @@ const Index = () => {
 
       <footer className="mt-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          {!isLoading && (fichas?.length ?? 0) > 0 && (
+          {!isLoading && !viewingArchived && activeFichas.length > 0 && (
             <div className="relative w-full mt-2">
               <AmbientKnowledgeGraph items={graphItems} className="w-full" centerAvoidRadius={0} />
               <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground/80 text-center">
                 <span className="rounded-full bg-background/65 px-3 py-1 backdrop-blur-[1px] shadow-[0_2px_10px_hsl(var(--background)/0.95)]">
-                  {(fichas?.length ?? 0)} fichas · {allTags.length} tags
+                  {activeFichas.length} fichas · {allTags.length} tags
                 </span>
               </p>
             </div>

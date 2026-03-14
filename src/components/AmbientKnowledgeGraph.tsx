@@ -102,8 +102,8 @@ const AmbientKnowledgeGraph = ({
       const strength = edge.sharedTags / maxSharedTags;
       return {
         ...edge,
-        alpha: 0.1 + strength * 0.18,
-        width: 0.45 + strength * 0.5,
+        alpha: 0.18 + strength * 0.24,
+        width: 0.75 + strength * 0.65,
       };
     });
 
@@ -127,7 +127,7 @@ const AmbientKnowledgeGraph = ({
     let lastTick = performance.now();
     let introFactor = 0;
     const isDark = document.documentElement.classList.contains("dark");
-    const edgeRgb = isDark ? "255,255,255" : "28,28,28";
+    const edgeRgb = isDark ? "255,255,255" : "52,52,52";
     const hasCenterAvoid = centerAvoidRadius > 0;
     let draggedNodeIndex: number | null = null;
     let activePointerId: number | null = null;
