@@ -3,7 +3,7 @@ import { ClipboardPaste, RotateCcw, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Ficha, useCreateFicha, useUpdateFicha } from "@/hooks/useFichas";
 import TiptapEditor, { type TiptapEditorHandle } from "@/components/TiptapEditor";
 import { isArchivedTag, normalizeTag, normalizeTags, orderTagsForDisplay } from "@/lib/utils";
@@ -165,6 +165,13 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   const discardDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
     resetForm();
+  };
+
+  const handleCloseWithReset = () => {
+    if (!editingFicha) {
+      discardDraft();
+    }
+    onOpenChange(false);
   };
 
   // Debounced auto-save draft (new fichas only).
@@ -337,10 +344,19 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        showCloseButton={false}
         className="max-w-[36rem] max-h-[90vh] overflow-y-auto overscroll-contain rounded-2xl border-border/70"
         onInteractOutside={(e) => { if (hasContent) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (hasContent) e.preventDefault(); }}
       >
+        <DialogClose
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+          onClick={handleCloseWithReset}
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Cerrar</span>
+        </DialogClose>
+
         <DialogTitle className="sr-only">
           {editingFicha ? "Editar ficha" : "Nueva ficha"}
         </DialogTitle>
