@@ -326,13 +326,13 @@ const Index = () => {
                     className={`w-3.5 h-3.5 ${weeklyStreakStats.hasCurrentWeek ? "text-orange-500" : "text-muted-foreground/60"}`}
                     fill={weeklyStreakStats.hasCurrentWeek ? "#fdba74" : "none"}
                   />
-                  <span className="sm:hidden inline-flex items-center gap-1 min-w-0">
-                    <span>racha semanal: {animatedWeeklyStreak}</span>
-                    <span className="hidden min-[390px]:inline-flex items-center gap-1 text-muted-foreground/85">
+                  <span className="sm:hidden inline-flex h-8 flex-col justify-center leading-[1.05]">
+                    <span className="text-[11px]">racha semanal: {animatedWeeklyStreak}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/85">
                       ({weeklyCreationStats.currentWeek} nuevas)
-                      {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3.5 h-3.5" />}
-                      {weeklyCreationStats.trend === "down" && <ArrowDown className="w-3.5 h-3.5" />}
-                      {weeklyCreationStats.trend === "flat" && <ArrowRight className="w-3.5 h-3.5" />}
+                      {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3 h-3" />}
+                      {weeklyCreationStats.trend === "down" && <ArrowDown className="w-3 h-3" />}
+                      {weeklyCreationStats.trend === "flat" && <ArrowRight className="w-3 h-3" />}
                     </span>
                   </span>
                   <span className="hidden sm:inline">racha semanal: {animatedWeeklyStreak}</span>

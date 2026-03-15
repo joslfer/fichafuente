@@ -151,7 +151,7 @@
   input[type="search"] {
     -webkit-user-select: text;
     user-select: text;
-    -webkit-touch-callout: default;
+    -webkit-touch-callout: none;
   }
 }
 
