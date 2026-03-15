@@ -1,17 +1,28 @@
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ClipboardPaste, RotateCcw, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Ficha, useCreateFicha, useUpdateFicha } from "@/hooks/useFichas";
-import TiptapEditor from "@/components/TiptapEditor";
+import TiptapEditor, { type TiptapEditorHandle } from "@/components/TiptapEditor";
 import { isArchivedTag, normalizeTag, normalizeTags, orderTagsForDisplay } from "@/lib/utils";
 
 type FichaFormProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingFicha?: Ficha | null;
+};
+
+const DRAFT_KEY = "fichafuente_new_ficha_draft";
+
+type FormDraft = {
+  html: string;
+  sourceName: string;
+  sourceUrl: string;
+  tags: string[];
+  authorsText: string;
+  showAuthorsField: boolean;
 };
 
 const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
@@ -25,6 +36,85 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   const [tags, setTags] = useState<string[]>([]);
   const [authorsText, setAuthorsText] = useState("");
   const [showAuthorsField, setShowAuthorsField] = useState(false);
+  const [isPastingLink, setIsPastingLink] = useState(false);
+  const [linkPasteFeedback, setLinkPasteFeedback] = useState<string | null>(null);
+  const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [draftBanner, setDraftBanner] = useState(false);
+  const draftTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const draftStatusTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const editorRef = useRef<TiptapEditorHandle>(null);
+  const sourceNameRef = useRef<HTMLTextAreaElement>(null);
+  const authorsRef = useRef<HTMLTextAreaElement>(null);
+  const sourceUrlRef = useRef<HTMLTextAreaElement>(null);
+  const tagsInputRef = useRef<HTMLInputElement>(null);
+
+  // Mirror showAuthorsField to a ref so the keydown handler always sees the latest value.
+  const showAuthorsFieldRef = useRef(showAuthorsField);
+  useEffect(() => { showAuthorsFieldRef.current = showAuthorsField; }, [showAuthorsField]);
+
+  // Auto-focus editor when opening a new ficha.
+  useEffect(() => {
+    if (!open || editingFicha) return;
+    const timer = window.setTimeout(() => editorRef.current?.focus(), 100);
+    return () => window.clearTimeout(timer);
+  }, [open, editingFicha]);
+
+  // Cmd+Right / Cmd+Down → next field, Cmd+Left / Cmd+Up → previous field.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleNav = (e: KeyboardEvent) => {
+      if (
+        !e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        !["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)
+      ) {
+        return;
+      }
+
+      const active = document.activeElement as Element | null;
+
+      type FieldEntry = { focus: () => void; contains: (el: Element | null) => boolean };
+      const fields: FieldEntry[] = [
+        {
+          focus: () => editorRef.current?.focus(),
+          contains: (el) => Boolean(el?.closest('[data-field="editor"]')),
+        },
+        {
+          focus: () => sourceNameRef.current?.focus(),
+          contains: (el) => el === sourceNameRef.current,
+        },
+        ...(showAuthorsFieldRef.current
+          ? [{
+              focus: () => authorsRef.current?.focus(),
+              contains: (el: Element | null) => el === authorsRef.current,
+            }]
+          : []),
+        {
+          focus: () => sourceUrlRef.current?.focus(),
+          contains: (el) => el === sourceUrlRef.current,
+        },
+        {
+          focus: () => tagsInputRef.current?.focus(),
+          contains: (el) => el === tagsInputRef.current,
+        },
+      ];
+
+      const currentIndex = fields.findIndex((f) => f.contains(active));
+      if (currentIndex === -1) return;
+
+      e.preventDefault();
+      const shouldAdvance = e.key === "ArrowRight" || e.key === "ArrowDown";
+      const nextIndex = shouldAdvance
+        ? Math.min(currentIndex + 1, fields.length - 1)
+        : Math.max(currentIndex - 1, 0);
+      fields[nextIndex].focus();
+    };
+
+    document.addEventListener("keydown", handleNav, true);
+    return () => document.removeEventListener("keydown", handleNav, true);
+  }, [open]);
 
   useEffect(() => {
     if (editingFicha) {
@@ -38,7 +128,24 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       setAuthorsText((editingFicha.authors || []).join(", "));
       const hasAuthors = (editingFicha.authors || []).length > 0;
       setShowAuthorsField(hasAuthors);
-    } else {
+    } else if (open) {
+      // Try to restore a saved draft.
+      try {
+        const saved = localStorage.getItem(DRAFT_KEY);
+        if (saved) {
+          const draft: FormDraft = JSON.parse(saved);
+          setHtml(draft.html ?? "");
+          setSourceName(draft.sourceName ?? "");
+          setSourceUrl(draft.sourceUrl ?? "");
+          setTags(draft.tags ?? []);
+          setAuthorsText(draft.authorsText ?? "");
+          setShowAuthorsField(draft.showAuthorsField ?? false);
+          setDraftBanner(true);
+          return;
+        }
+      } catch {
+        // corrupted draft — ignore
+      }
       resetForm();
     }
   }, [editingFicha, open]);
@@ -51,7 +158,34 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
     setTagsInput("");
     setAuthorsText("");
     setShowAuthorsField(false);
+    setDraftBanner(false);
+    setDraftStatus("idle");
   };
+
+  const discardDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    resetForm();
+  };
+
+  // Debounced auto-save draft (new fichas only).
+  useEffect(() => {
+    if (editingFicha || !open) return;
+    if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
+    setDraftStatus("saving");
+    draftTimerRef.current = window.setTimeout(() => {
+      const draft: FormDraft = { html, sourceName, sourceUrl, tags, authorsText, showAuthorsField };
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch { /* quota exceeded — ignore */ }
+      if (draftStatusTimerRef.current) window.clearTimeout(draftStatusTimerRef.current);
+      setDraftStatus("saved");
+      draftStatusTimerRef.current = window.setTimeout(() => setDraftStatus("idle"), 2500);
+    }, 2000);
+    return () => {
+      if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
+      if (draftStatusTimerRef.current) window.clearTimeout(draftStatusTimerRef.current);
+    };
+  }, [html, sourceName, sourceUrl, tags, authorsText, showAuthorsField, editingFicha, open]);
 
   const handleAddTag = () => {
     const tag = normalizeTag(tagsInput);
@@ -78,6 +212,31 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       .forEach((author) => uniqueAuthors.add(author));
 
     return Array.from(uniqueAuthors);
+  };
+
+  const handlePasteSourceUrl = async () => {
+    if (!navigator.clipboard) {
+      sourceUrlRef.current?.focus();
+      setLinkPasteFeedback("Pega manualmente en el campo");
+      return;
+    }
+
+    setIsPastingLink(true);
+    try {
+      const rawText = await navigator.clipboard.readText();
+      if (!rawText.trim()) {
+        setLinkPasteFeedback("El portapapeles está vacío");
+        return;
+      }
+      setSourceUrl(rawText.trim());
+      setLinkPasteFeedback("Pegado");
+    } catch {
+      sourceUrlRef.current?.focus();
+      setLinkPasteFeedback("Pega manualmente en el campo");
+    } finally {
+      setIsPastingLink(false);
+      window.setTimeout(() => setLinkPasteFeedback(null), 1800);
+    }
   };
 
   const parseHtml = (rawHtml: string) => {
@@ -118,6 +277,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       await updateFicha.mutateAsync({ id: editingFicha.id, ...fichaData });
     } else {
       await createFicha.mutateAsync(fichaData);
+      localStorage.removeItem(DRAFT_KEY);
     }
 
     onOpenChange(false);
@@ -137,7 +297,20 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
 
     const handleEnterToSubmit = (event: KeyboardEvent) => {
       if (event.key !== "Enter" || event.defaultPrevented || event.isComposing) return;
-      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+
+      const hasShortcutModifier = event.metaKey || event.ctrlKey;
+
+      if (hasShortcutModifier) {
+        if (event.altKey || event.shiftKey) return;
+        if (!title || createFicha.isPending || updateFicha.isPending) return;
+
+        event.preventDefault();
+        const form = document.querySelector('form[data-ficha-form="true"]') as HTMLFormElement | null;
+        form?.requestSubmit();
+        return;
+      }
+
+      if (event.altKey || event.shiftKey) return;
       if (isTypingTarget(event.target)) return;
 
       const activeElement = document.activeElement;
@@ -155,24 +328,54 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       form?.requestSubmit();
     };
 
-    window.addEventListener("keydown", handleEnterToSubmit);
-    return () => window.removeEventListener("keydown", handleEnterToSubmit);
+    document.addEventListener("keydown", handleEnterToSubmit, true);
+    return () => document.removeEventListener("keydown", handleEnterToSubmit, true);
   }, [open, title, createFicha.isPending, updateFicha.isPending]);
+
+  const hasContent = Boolean(html || sourceName || sourceUrl || tags.length || authorsText);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border-border/70">
+      <DialogContent
+        className="max-w-[36rem] max-h-[90vh] overflow-y-auto overscroll-contain rounded-2xl border-border/70"
+        onInteractOutside={(e) => { if (hasContent) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (hasContent) e.preventDefault(); }}
+      >
         <DialogTitle className="sr-only">
           {editingFicha ? "Editar ficha" : "Nueva ficha"}
         </DialogTitle>
 
         <form onSubmit={handleSubmit} className="space-y-4" data-ficha-form="true">
           <div>
-            <Label className="text-xs font-medium text-muted-foreground">
-              Contenido (la primera línea será el título)
-            </Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Contenido (la primera línea será el título)
+              </Label>
+              {/* Draft status — right-aligned, very subtle */}
+              {!editingFicha && draftStatus !== "idle" && (
+                <span className="ml-auto mr-6 flex items-center gap-1 text-[10px] text-muted-foreground/40 transition-opacity duration-500">
+                  <Save className="w-2.5 h-2.5" />
+                  {draftStatus === "saving" ? "Guardando…" : "Guardado"}
+                </span>
+              )}
+              {!editingFicha && draftBanner && draftStatus === "idle" && (
+                <span className="ml-auto mr-6 flex items-center gap-1 text-[10px] text-muted-foreground/40">
+                  <Save className="w-2.5 h-2.5" />
+                  <span>Borrador</span>
+                  <button
+                    type="button"
+                    onClick={discardDraft}
+                    title="Descartar borrador"
+                    className="inline-flex items-center opacity-60 hover:opacity-100 transition-opacity"
+                  >
+                    <RotateCcw className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              )}
+            </div>
             <div className="mt-1">
               <TiptapEditor
+                ref={editorRef}
                 content={html}
                 onChange={setHtml}
                 placeholder="Título en la primera línea… Luego desarrolla el contenido"
@@ -195,11 +398,12 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
             </div>
             <textarea
               id="sourceName"
+              ref={sourceNameRef}
               value={sourceName}
               onChange={(e) => setSourceName(e.target.value)}
               placeholder="Nombre de la fuente"
               rows={2}
-              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
             />
           </div>
 
@@ -207,23 +411,40 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
             <div>
               <Label className="text-xs font-medium text-muted-foreground">Autores</Label>
               <textarea
+                ref={authorsRef}
                 value={authorsText}
                 onChange={(e) => setAuthorsText(e.target.value)}
                 rows={2}
-                className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
               />
             </div>
           )}
 
           <div>
-            <Label htmlFor="sourceUrl" className="text-xs font-medium text-muted-foreground">Link de la fuente</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="sourceUrl" className="text-xs font-medium text-muted-foreground">Link de la fuente</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handlePasteSourceUrl}
+                disabled={isPastingLink}
+                className="h-5 px-1.5 text-[11px] font-medium leading-none text-muted-foreground hover:text-foreground"
+                title="Pegar link del portapapeles"
+              >
+                <ClipboardPaste className="mr-1 h-3 w-3" />
+                {isPastingLink ? "Pegando..." : "Pegar link"}
+              </Button>
+            </div>
+            {linkPasteFeedback && <p className="mt-1 text-[11px] text-muted-foreground">{linkPasteFeedback}</p>}
             <textarea
               id="sourceUrl"
+              ref={sourceUrlRef}
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
               placeholder="https://..."
               rows={2}
-              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
             />
           </div>
 
@@ -248,12 +469,13 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               ))}
             </div>
             <Input
+              ref={tagsInputRef}
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               onKeyDown={handleTagKeyDown}
               onBlur={handleAddTag}
                 placeholder="Añadir tag"
-              className="text-sm rounded-lg"
+              className="text-sm rounded-lg focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           </div>
 

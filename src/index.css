@@ -138,7 +138,7 @@
 
 /* iOS Safari auto-zoom prevention */
 @supports (-webkit-touch-callout: none) {
-  input, select, textarea {
+  input, select, textarea, .ficha-editor-content {
     font-size: 16px !important;
   }
 
@@ -325,7 +325,19 @@
 .ficha-editor-content p {
   margin: 0.4em 0;
   min-height: 1.2em;
-  line-height: 1.7;
+  line-height: 1.5;
+}
+
+.ficha-editor-content > p:first-child,
+.ficha-editor-content > h1:first-child,
+.ficha-editor-content > h2:first-child,
+.ficha-editor-content > h3:first-child {
+  font-size: 1.03rem;
+  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+  margin-top: 0.1em;
+  margin-bottom: 0.45em;
 }
 
 .ficha-editor-content h1 {

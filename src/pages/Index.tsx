@@ -24,11 +24,19 @@ const Index = () => {
   const [editingFicha, setEditingFicha] = useState<Ficha | null>(null);
 
   const { data: fichas, isLoading } = useFichas(searchQuery, tagFilters);
+  // Stats are always computed from all fichas (no tag filter) so they don't change when filtering.
+  const { data: allFichasForStats } = useFichas();
   const viewingArchived = tagFilters.includes(ARCHIVED_TAG);
 
   const activeFichas = useMemo(
     () => (fichas ?? []).filter((ficha) => !(ficha.tags ?? []).includes(ARCHIVED_TAG)),
     [fichas]
+  );
+
+  // Unfiltered active fichas — used for streak/monthly stats only.
+  const allActiveFichas = useMemo(
+    () => (allFichasForStats ?? []).filter((ficha) => !(ficha.tags ?? []).includes(ARCHIVED_TAG)),
+    [allFichasForStats]
   );
 
   const archivedFichas = useMemo(
@@ -43,7 +51,7 @@ const Index = () => {
     if (!fichas) return [];
     const tagCounts = new Map<string, number>();
 
-    fichas.forEach((f) => {
+    visibleFichas.forEach((f) => {
       // Count a tag at most once per ficha.
       const uniqueTagsInFicha = new Set(f.tags ?? []);
       uniqueTagsInFicha.forEach((tag) => {
@@ -51,14 +59,14 @@ const Index = () => {
       });
     });
 
-    if (!tagCounts.has(ARCHIVED_TAG)) {
+    if (!searchQuery.trim() && !tagFilters.length && !tagCounts.has(ARCHIVED_TAG) && (allFichasForStats ?? []).length > 0) {
       tagCounts.set(ARCHIVED_TAG, 0);
     }
 
     return Array.from(tagCounts.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))
       .map(([tag]) => tag);
-  }, [fichas]);
+  }, [allFichasForStats, fichas, searchQuery, tagFilters, visibleFichas]);
 
   const monthlyCardsStats = useMemo(() => {
     const now = new Date();
@@ -68,7 +76,7 @@ const Index = () => {
     let currentMonth = 0;
     let previousMonth = 0;
 
-    activeFichas.forEach((ficha) => {
+    allActiveFichas.forEach((ficha) => {
       const createdAt = new Date(ficha.created_at);
       if (Number.isNaN(createdAt.getTime())) return;
 
@@ -87,7 +95,7 @@ const Index = () => {
       previousMonth,
       delta: currentMonth - previousMonth,
     };
-  }, [activeFichas]);
+  }, [allActiveFichas]);
 
   const currentMonthLabel = useMemo(() => {
     return new Intl.DateTimeFormat("es-ES", { month: "long" }).format(new Date()).toLowerCase();
@@ -103,7 +111,7 @@ const Index = () => {
     };
 
     const weekKeys = new Set<string>();
-    activeFichas.forEach((ficha) => {
+    allActiveFichas.forEach((ficha) => {
       const createdAt = new Date(ficha.created_at);
       if (Number.isNaN(createdAt.getTime())) return;
       weekKeys.add(getWeekStart(createdAt).toISOString());
@@ -123,7 +131,7 @@ const Index = () => {
       current: streak,
       hasCurrentWeek: weekKeys.has(currentWeekKey),
     };
-  }, [activeFichas]);
+  }, [allActiveFichas]);
 
   const weeklyCreationStats = useMemo(() => {
     const getWeekStart = (date: Date) => {
@@ -144,7 +152,7 @@ const Index = () => {
     let currentWeek = 0;
     let previousWeek = 0;
 
-    activeFichas.forEach((ficha) => {
+    allActiveFichas.forEach((ficha) => {
       const createdAt = new Date(ficha.created_at);
       if (Number.isNaN(createdAt.getTime())) return;
 
@@ -166,7 +174,7 @@ const Index = () => {
       previousWeek,
       trend,
     };
-  }, [activeFichas]);
+  }, [allActiveFichas]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -302,8 +310,8 @@ const Index = () => {
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/60">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+              <div className="flex items-center gap-2 shrink-0">
                 <FileText className="w-5 h-5 text-primary" />
                 <span className="text-base font-semibold tracking-tight"><span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span><span className="text-primary">fuente</span></span>
               </div>
@@ -314,9 +322,21 @@ const Index = () => {
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 ml-3 sm:ml-4 text-xs sm:text-sm font-normal text-muted-foreground/90 tabular-nums whitespace-nowrap">
-                  <Flame className={`w-3.5 h-3.5 ${weeklyStreakStats.hasCurrentWeek ? "text-orange-500" : "text-muted-foreground/60"}`} />
-                  <span>racha semanal: {animatedWeeklyStreak}</span>
-                  <span className="inline-flex items-center gap-1 ml-2 sm:ml-3 text-muted-foreground/85">
+                  <Flame
+                    className={`w-3.5 h-3.5 ${weeklyStreakStats.hasCurrentWeek ? "text-orange-500" : "text-muted-foreground/60"}`}
+                    fill={weeklyStreakStats.hasCurrentWeek ? "#fdba74" : "none"}
+                  />
+                  <span className="sm:hidden inline-flex items-center gap-1 min-w-0">
+                    <span>racha semanal: {animatedWeeklyStreak}</span>
+                    <span className="hidden min-[390px]:inline-flex items-center gap-1 text-muted-foreground/85">
+                      ({weeklyCreationStats.currentWeek} nuevas)
+                      {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3.5 h-3.5" />}
+                      {weeklyCreationStats.trend === "down" && <ArrowDown className="w-3.5 h-3.5" />}
+                      {weeklyCreationStats.trend === "flat" && <ArrowRight className="w-3.5 h-3.5" />}
+                    </span>
+                  </span>
+                  <span className="hidden sm:inline">racha semanal: {animatedWeeklyStreak}</span>
+                  <span className="hidden sm:inline-flex items-center gap-1 ml-3 text-muted-foreground/85">
                     ({weeklyCreationStats.currentWeek} nuevas)
                     {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3.5 h-3.5" />}
                     {weeklyCreationStats.trend === "down" && <ArrowDown className="w-3.5 h-3.5" />}
