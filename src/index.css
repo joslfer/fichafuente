@@ -141,6 +141,18 @@
   input, select, textarea {
     font-size: 16px !important;
   }
+
+  /* iOS Safari: make long-press selection reliable in editable fields inside dialogs */
+  .ficha-editor-content,
+  .ficha-editor-content *,
+  textarea,
+  input[type="text"],
+  input[type="url"],
+  input[type="search"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
 }
 
 /* Counter pulse animation */

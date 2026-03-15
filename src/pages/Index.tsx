@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Plus, Search, LogOut, X, FileText, ArrowUp } from "lucide-react";
+import { Plus, Search, LogOut, X, FileText, ArrowUp, ArrowDown, ArrowRight, Archive, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,11 +11,14 @@ import AmbientKnowledgeGraph from "@/components/AmbientKnowledgeGraph";
 import { ARCHIVED_TAG, isArchivedTag, normalizeTag } from "@/lib/utils";
 
 const Index = () => {
+  const showMonthlyNewCards = false;
+
   const { user, signOut } = useAuth();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchIconAnimating, setIsSearchIconAnimating] = useState(false);
   const [animatedMonthlyCount, setAnimatedMonthlyCount] = useState(0);
+  const [animatedWeeklyStreak, setAnimatedWeeklyStreak] = useState(0);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingFicha, setEditingFicha] = useState<Ficha | null>(null);
@@ -35,16 +38,26 @@ const Index = () => {
 
   const visibleFichas = viewingArchived ? archivedFichas : activeFichas;
 
-  // Collect all unique tags
+  // Collect all unique tags and prioritize the most used ones.
   const allTags = useMemo(() => {
     if (!fichas) return [];
-    const tagSet = new Set<string>();
-    fichas.forEach((f) => f.tags?.forEach((t) => tagSet.add(t)));
-    return Array.from(tagSet).sort((a, b) => {
-      if (a === ARCHIVED_TAG) return 1;
-      if (b === ARCHIVED_TAG) return -1;
-      return a.localeCompare(b);
+    const tagCounts = new Map<string, number>();
+
+    fichas.forEach((f) => {
+      // Count a tag at most once per ficha.
+      const uniqueTagsInFicha = new Set(f.tags ?? []);
+      uniqueTagsInFicha.forEach((tag) => {
+        tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+      });
     });
+
+    if (!tagCounts.has(ARCHIVED_TAG)) {
+      tagCounts.set(ARCHIVED_TAG, 0);
+    }
+
+    return Array.from(tagCounts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))
+      .map(([tag]) => tag);
   }, [fichas]);
 
   const monthlyCardsStats = useMemo(() => {
@@ -80,6 +93,81 @@ const Index = () => {
     return new Intl.DateTimeFormat("es-ES", { month: "long" }).format(new Date()).toLowerCase();
   }, []);
 
+  const weeklyStreakStats = useMemo(() => {
+    const getWeekStart = (date: Date) => {
+      const normalized = new Date(date);
+      normalized.setHours(0, 0, 0, 0);
+      const day = (normalized.getDay() + 6) % 7;
+      normalized.setDate(normalized.getDate() - day);
+      return normalized;
+    };
+
+    const weekKeys = new Set<string>();
+    activeFichas.forEach((ficha) => {
+      const createdAt = new Date(ficha.created_at);
+      if (Number.isNaN(createdAt.getTime())) return;
+      weekKeys.add(getWeekStart(createdAt).toISOString());
+    });
+
+    const currentWeek = getWeekStart(new Date());
+    const currentWeekKey = currentWeek.toISOString();
+
+    let streak = 0;
+    const cursor = new Date(currentWeek);
+    while (weekKeys.has(cursor.toISOString())) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 7);
+    }
+
+    return {
+      current: streak,
+      hasCurrentWeek: weekKeys.has(currentWeekKey),
+    };
+  }, [activeFichas]);
+
+  const weeklyCreationStats = useMemo(() => {
+    const getWeekStart = (date: Date) => {
+      const normalized = new Date(date);
+      normalized.setHours(0, 0, 0, 0);
+      const day = (normalized.getDay() + 6) % 7;
+      normalized.setDate(normalized.getDate() - day);
+      return normalized;
+    };
+
+    const currentWeekStart = getWeekStart(new Date());
+    const nextWeekStart = new Date(currentWeekStart);
+    nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+
+    let currentWeek = 0;
+    let previousWeek = 0;
+
+    activeFichas.forEach((ficha) => {
+      const createdAt = new Date(ficha.created_at);
+      if (Number.isNaN(createdAt.getTime())) return;
+
+      if (createdAt >= currentWeekStart && createdAt < nextWeekStart) {
+        currentWeek += 1;
+        return;
+      }
+
+      if (createdAt >= previousWeekStart && createdAt < currentWeekStart) {
+        previousWeek += 1;
+      }
+    });
+
+    const delta = currentWeek - previousWeek;
+    const trend = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+
+    return {
+      currentWeek,
+      previousWeek,
+      trend,
+    };
+  }, [activeFichas]);
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -105,6 +193,32 @@ const Index = () => {
     frameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frameId);
   }, [monthlyCardsStats.currentMonth, isLoading]);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const target = weeklyStreakStats.current;
+    const from = animatedWeeklyStreak;
+    const duration = 680;
+    const start = performance.now();
+    let frameId = 0;
+
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = easeOutCubic(progress);
+      const next = Math.round(from + (target - from) * eased);
+      setAnimatedWeeklyStreak(next);
+
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [weeklyStreakStats.current, isLoading]);
 
   const graphItems = useMemo(
     () => activeFichas.map((ficha) => ({ tags: ficha.tags ?? [] })),
@@ -193,10 +307,23 @@ const Index = () => {
                 <FileText className="w-5 h-5 text-primary" />
                 <span className="text-base font-semibold tracking-tight"><span className="bg-gradient-to-b from-[hsl(var(--logo-gradient-from))] to-[hsl(var(--logo-gradient-to))] bg-clip-text text-transparent">Ficha</span><span className="text-primary">fuente</span></span>
               </div>
-              <span className="inline-flex items-center gap-1.5 ml-3 sm:ml-4 text-xs sm:text-sm font-normal text-muted-foreground/85 tabular-nums whitespace-nowrap">
-                {currentMonthLabel}: {animatedMonthlyCount}
-                {monthlyCardsStats.delta > 0 && <ArrowUp className="w-3.5 h-3.5 text-success" />}
-              </span>
+              {showMonthlyNewCards ? (
+                <span className="inline-flex items-center gap-1.5 ml-3 sm:ml-4 text-xs sm:text-sm font-normal text-muted-foreground/85 tabular-nums whitespace-nowrap">
+                  {currentMonthLabel}: {animatedMonthlyCount}
+                  {monthlyCardsStats.delta > 0 && <ArrowUp className="w-3.5 h-3.5 text-success" />}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 ml-3 sm:ml-4 text-xs sm:text-sm font-normal text-muted-foreground/90 tabular-nums whitespace-nowrap">
+                  <Flame className={`w-3.5 h-3.5 ${weeklyStreakStats.hasCurrentWeek ? "text-orange-500" : "text-muted-foreground/60"}`} />
+                  <span>racha semanal: {animatedWeeklyStreak}</span>
+                  <span className="inline-flex items-center gap-1 ml-2 sm:ml-3 text-muted-foreground/85">
+                    ({weeklyCreationStats.currentWeek} nuevas)
+                    {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3.5 h-3.5" />}
+                    {weeklyCreationStats.trend === "down" && <ArrowDown className="w-3.5 h-3.5" />}
+                    {weeklyCreationStats.trend === "flat" && <ArrowRight className="w-3.5 h-3.5" />}
+                  </span>
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -264,11 +391,12 @@ const Index = () => {
                 onClick={() => removeTagFilter(selectedTag)}
                 className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] ${
                   isArchivedTag(selectedTag)
-                    ? "bg-secondary text-foreground/80 border border-border hover:bg-secondary/90 hover:ring-border"
+                    ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)] hover:ring-[hsl(var(--foreground)/0.18)]"
                     : "bg-primary text-primary-foreground hover:brightness-110 hover:ring-primary/40"
                 }`}
                 style={{ animationDelay: `${selectedIndex * 24}ms`, animationFillMode: "both" }}
               >
+                {isArchivedTag(selectedTag) && <Archive className="w-3 h-3" />}
                 {selectedTag}
                 <X className="w-3 h-3" />
               </button>
@@ -282,11 +410,12 @@ const Index = () => {
                   disabled={maxTagsReached}
                   className={`text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none ${
                     isArchivedTag(tag)
-                      ? "bg-secondary text-foreground/80 border border-border hover:bg-secondary/90 hover:ring-border"
+                        ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)] hover:ring-[hsl(var(--foreground)/0.18)]"
                       : "bg-badge text-badge-foreground hover:bg-badge/80 hover:ring-primary/35"
                   }`}
                   style={{ animationDelay: `${Math.min(index * 32, 224)}ms`, animationFillMode: "both" }}
                 >
+                  {isArchivedTag(tag) && <Archive className="w-3 h-3 inline-block mr-1" />}
                   {tag}
                 </button>
               ))}
