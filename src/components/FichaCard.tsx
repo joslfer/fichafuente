@@ -20,7 +20,6 @@ type FichaCardProps = {
   ficha: Ficha;
   onEdit: (ficha: Ficha) => void;
   searchQuery?: string;
-  isCenteredMobile?: boolean;
 };
 
 type LaserPath = {
@@ -102,7 +101,7 @@ const buildRandomLaserPath = (rect: DOMRect): LaserPath => {
   };
 };
 
-const FichaCard = ({ ficha, onEdit, searchQuery, isCenteredMobile = false }: FichaCardProps) => {
+const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
   const deleteFicha = useDeleteFicha();
   const cardRef = useRef<HTMLElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
@@ -278,7 +277,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isCenteredMobile = false }: Fic
       <article
       ref={cardRef}
       data-ficha-card-id={ficha.id}
-      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${isCenteredMobile ? "mobile-card-focus" : ""} ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
+      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
     >
       {deletePhase === "charging" && (
         <div className="pointer-events-none absolute inset-0 z-20">
@@ -323,7 +322,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isCenteredMobile = false }: Fic
       <div className="mb-2 pr-8">
         <h3
           className={`text-[15px] font-semibold leading-snug transition-colors ${
-            canOpenPublicPreview ? "text-foreground cursor-pointer hover:text-primary" : "text-foreground"
+            canOpenPublicPreview ? "text-foreground cursor-pointer sm:hover:text-primary" : "text-foreground"
           }`}
           onClick={canOpenPublicPreview ? handleClick : undefined}
         >
@@ -372,7 +371,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isCenteredMobile = false }: Fic
                 href={ficha.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 min-w-0 text-sm font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                className="flex items-center gap-1 min-w-0 text-sm font-semibold text-primary underline underline-offset-2 sm:hover:text-primary/80 transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
                 <span className="truncate">{highlightText(ficha.source_name, searchQuery || "")}</span>
@@ -397,10 +396,10 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isCenteredMobile = false }: Fic
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-100 hover:-translate-y-px ${
+              className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-100 sm:hover:-translate-y-px ${
                 isArchivedTag(tag)
-                  ? "ml-auto bg-secondary text-foreground/80 border border-border hover:bg-secondary/90"
-                  : "bg-badge text-badge-foreground hover:bg-badge/80"
+                  ? "ml-auto bg-secondary text-foreground/80 border border-border sm:hover:bg-secondary/90"
+                  : "bg-badge text-badge-foreground sm:hover:bg-badge/80"
               }`}
             >
               <Hash className="w-2.5 h-2.5" />
@@ -411,7 +410,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isCenteredMobile = false }: Fic
             <button
               type="button"
               onClick={() => setShowAllTags((prev) => !prev)}
-              className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+              className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border border-border text-muted-foreground sm:hover:text-foreground sm:hover:bg-accent/60 transition-colors"
             >
               {showAllTags ? "menos tags" : "más tags"}
             </button>

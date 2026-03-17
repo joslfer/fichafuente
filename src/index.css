@@ -558,11 +558,6 @@
     ficha-laser-vibrate 0.08s linear infinite;
 }
 
-.mobile-card-focus {
-  border-color: hsl(var(--border));
-  box-shadow: 0 10px 24px hsl(var(--foreground) / 0.08), 0 0 0 1px hsl(var(--foreground) / 0.06);
-}
-
 @keyframes ficha-destruction-flare {
   0% {
     opacity: 0;
@@ -685,6 +680,16 @@
   .ficha-destruction-afterglow {
     width: 210px;
     height: 210px;
+  }
+}
+
+@media (max-width: 639px) {
+  .tag-hop:hover {
+    transform: none !important;
+  }
+
+  .group:hover {
+    box-shadow: inherit !important;
   }
 }
 
