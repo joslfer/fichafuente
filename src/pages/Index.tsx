@@ -20,13 +20,14 @@ const Index = () => {
   const [animatedMonthlyCount, setAnimatedMonthlyCount] = useState(0);
   const [animatedWeeklyStreak, setAnimatedWeeklyStreak] = useState(0);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
+  const [graphPerturbSignal, setGraphPerturbSignal] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editingFicha, setEditingFicha] = useState<Ficha | null>(null);
 
   const { data: fichas, isLoading } = useFichas(searchQuery, tagFilters);
   // Stats are always computed from all fichas (no tag filter) so they don't change when filtering.
   const { data: allFichasForStats } = useFichas();
-  const viewingArchived = tagFilters.includes(ARCHIVED_TAG);
+  const viewingArchived = tagFilters.some((tag) => normalizeTag(tag) === ARCHIVED_TAG);
 
   const activeFichas = useMemo(
     () => (fichas ?? []).filter((ficha) => !(ficha.tags ?? []).includes(ARCHIVED_TAG)),
@@ -176,6 +177,8 @@ const Index = () => {
     };
   }, [allActiveFichas]);
 
+  const isWeeklyStreakZero = weeklyStreakStats.current === 0;
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -251,19 +254,18 @@ const Index = () => {
   };
 
   const addTagFilter = (tag: string) => {
-    const normalizedTag = normalizeTag(tag);
-    if (!normalizedTag) return;
+    const normalizedTagKey = normalizeTag(tag);
+    if (!normalizedTagKey) return;
 
     setTagFilters((prev) => {
-      if (prev.includes(normalizedTag)) return prev;
-      if (prev.length >= 2) return prev;
-      return [...prev, normalizedTag];
+      if (prev.some((prevTag) => normalizeTag(prevTag) === normalizedTagKey)) return prev;
+      return [...prev, tag];
     });
   };
 
   const removeTagFilter = (tag: string) => {
-    const normalizedTag = normalizeTag(tag);
-    setTagFilters((prev) => prev.filter((t) => t !== normalizedTag));
+    const normalizedTagKey = normalizeTag(tag);
+    setTagFilters((prev) => prev.filter((t) => normalizeTag(t) !== normalizedTagKey));
   };
 
   const triggerSearchIconAnimation = () => {
@@ -273,8 +275,6 @@ const Index = () => {
       window.setTimeout(() => setIsSearchIconAnimating(false), 220);
     });
   };
-
-  const maxTagsReached = tagFilters.length >= 2;
 
   useEffect(() => {
     const isTypingTarget = (target: EventTarget | null) => {
@@ -327,20 +327,20 @@ const Index = () => {
                     fill={weeklyStreakStats.hasCurrentWeek ? "#fdba74" : "none"}
                   />
                   <span className="sm:hidden inline-flex h-8 flex-col justify-center leading-[1.05]">
-                    <span className="text-[11px]">racha semanal: {animatedWeeklyStreak}</span>
+                    <span className="text-[11px]">
+                      {isWeeklyStreakZero ? "Continúa esta semana!" : `racha semanal: ${animatedWeeklyStreak}`}
+                    </span>
                     <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/85">
                       ({weeklyCreationStats.currentWeek} nuevas)
                       {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3 h-3" />}
-                      {weeklyCreationStats.trend === "down" && <ArrowDown className="w-3 h-3" />}
-                      {weeklyCreationStats.trend === "flat" && <ArrowRight className="w-3 h-3" />}
                     </span>
                   </span>
-                  <span className="hidden sm:inline">racha semanal: {animatedWeeklyStreak}</span>
+                  <span className="hidden sm:inline">
+                    {isWeeklyStreakZero ? "Continúa esta semana!" : `racha semanal: ${animatedWeeklyStreak}`}
+                  </span>
                   <span className="hidden sm:inline-flex items-center gap-1 ml-3 text-muted-foreground/85">
                     ({weeklyCreationStats.currentWeek} nuevas)
                     {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3.5 h-3.5" />}
-                    {weeklyCreationStats.trend === "down" && <ArrowDown className="w-3.5 h-3.5" />}
-                    {weeklyCreationStats.trend === "flat" && <ArrowRight className="w-3.5 h-3.5" />}
                   </span>
                 </span>
               )}
@@ -354,7 +354,7 @@ const Index = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground"
+                className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
                 onClick={signOut}
                 title="Cerrar sesión"
               >
@@ -409,12 +409,12 @@ const Index = () => {
               <button
                 key={selectedTag}
                 onClick={() => removeTagFilter(selectedTag)}
-                className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] ${
+                className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] ${
                   isArchivedTag(selectedTag)
                     ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)] hover:ring-[hsl(var(--foreground)/0.18)]"
                     : "bg-primary text-primary-foreground hover:brightness-110 hover:ring-primary/40"
                 }`}
-                style={{ animationDelay: `${selectedIndex * 24}ms`, animationFillMode: "both" }}
+                style={{ animationDelay: `${selectedIndex * 24}ms`, animationFillMode: "backwards" }}
               >
                 {isArchivedTag(selectedTag) && <Archive className="w-3 h-3" />}
                 {selectedTag}
@@ -427,21 +427,17 @@ const Index = () => {
                 <button
                   key={tag}
                   onClick={() => addTagFilter(tag)}
-                  disabled={maxTagsReached}
-                  className={`text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none ${
+                  className={`tag-hop text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     isArchivedTag(tag)
                         ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)] hover:ring-[hsl(var(--foreground)/0.18)]"
                       : "bg-badge text-badge-foreground hover:bg-badge/80 hover:ring-primary/35"
                   }`}
-                  style={{ animationDelay: `${Math.min(index * 32, 224)}ms`, animationFillMode: "both" }}
+                  style={{ animationDelay: `${Math.min(index * 32, 224)}ms`, animationFillMode: "backwards" }}
                 >
                   {isArchivedTag(tag) && <Archive className="w-3 h-3 inline-block mr-1" />}
                   {tag}
                 </button>
               ))}
-            {maxTagsReached && (
-              <span className="text-[11px] text-muted-foreground px-1.5 py-1">Máximo 2 tags</span>
-            )}
           </div>
         )}
         {isLoading ? (
@@ -509,11 +505,22 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           {!isLoading && !viewingArchived && activeFichas.length > 0 && (
             <div className="relative w-full mt-2">
-              <AmbientKnowledgeGraph items={graphItems} className="w-full" centerAvoidRadius={0} />
+              <AmbientKnowledgeGraph
+                items={graphItems}
+                className="w-full"
+                centerAvoidRadius={0}
+                perturbSignal={graphPerturbSignal}
+              />
               <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground/80 text-center">
-                <span className="rounded-full bg-background/65 px-3 py-1 backdrop-blur-[1px] shadow-[0_2px_10px_hsl(var(--background)/0.95)]">
+                <button
+                  type="button"
+                  onClick={() => setGraphPerturbSignal((prev) => prev + 1)}
+                  className="pointer-events-auto rounded-full bg-background/65 px-3 py-1 backdrop-blur-[1px] shadow-[0_2px_10px_hsl(var(--background)/0.95)] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                  title="Mover el gráfico"
+                  aria-label="Aplicar una pequeña perturbación al gráfico"
+                >
                   {activeFichas.length} fichas · {allTags.length} tags
-                </span>
+                </button>
               </p>
             </div>
           )}

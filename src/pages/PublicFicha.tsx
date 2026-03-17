@@ -4,6 +4,7 @@ import { FileText, ExternalLink, Calendar, Hash, Quote, ArrowLeft, Link2 } from 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Ficha } from "@/hooks/useFichas";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const PublicFicha = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const isDoiSource = isDoiSourceUrl(ficha?.source_url);
+  const isOwner = Boolean(user?.id && ficha?.user_id && user.id === ficha.user_id);
 
 useEffect(() => {
     const load = async () => {
@@ -115,6 +118,17 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-background">
+      {isOwner && (
+        <a
+          href="/"
+          className="sm:hidden fixed left-4 bottom-4 z-30 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/90 px-3 py-2 text-xs font-medium text-foreground shadow-md backdrop-blur-sm active:scale-[0.98] transition-transform"
+          aria-label="Volver a la grid"
+          title="Volver a la grid"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Volver
+        </a>
+      )}
       <div className="max-w-2xl mx-auto px-4 py-12">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-8">
           <a href="/" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors min-w-0">
@@ -188,7 +202,7 @@ useEffect(() => {
           {ficha.tags && ficha.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {ficha.tags.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-badge text-badge-foreground transition-all duration-100 hover:-translate-y-px hover:bg-badge/80">
+                <span key={tag} className="tag-hop inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-badge text-badge-foreground transition-all duration-100 hover:-translate-y-px hover:bg-badge/80">
                   <Hash className="w-2.5 h-2.5" />
                   {tag}
                 </span>

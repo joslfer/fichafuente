@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { ARCHIVED_TAG, normalizeTags } from "@/lib/utils";
+import { ARCHIVED_TAG, normalizeTag, normalizeTags } from "@/lib/utils";
 
 export type Ficha = Tables<"fichas">;
 export type FichaInsert = TablesInsert<"fichas">;
@@ -54,6 +54,48 @@ const isArchiveStateSynced = (currentFicha: Ficha, nextFicha: Ficha) => {
   return haveSameTags(currentFicha.tags, nextFicha.tags ?? []) && currentFicha.archived_at === nextFicha.archived_at;
 };
 
+const hasDiacritics = (text: string) => text.normalize("NFD") !== text;
+
+const buildPreferredTagByKey = (fichas: Ficha[]) => {
+  const preferredTagByKey = new Map<string, string>();
+
+  fichas.forEach((ficha) => {
+    (ficha.tags ?? []).forEach((tag) => {
+      const key = normalizeTag(tag);
+      if (!key) return;
+
+      const existing = preferredTagByKey.get(key);
+      if (!existing) {
+        preferredTagByKey.set(key, tag);
+        return;
+      }
+
+      if (!hasDiacritics(existing) && hasDiacritics(tag)) {
+        preferredTagByKey.set(key, tag);
+      }
+    });
+  });
+
+  return preferredTagByKey;
+};
+
+const canonicalizeFichaTags = (ficha: Ficha, preferredTagByKey: Map<string, string>): Ficha => {
+  const seen = new Set<string>();
+  const canonicalTags = (ficha.tags ?? []).reduce<string[]>((acc, tag) => {
+    const key = normalizeTag(tag);
+    if (!key || seen.has(key)) return acc;
+
+    seen.add(key);
+    acc.push(preferredTagByKey.get(key) ?? tag);
+    return acc;
+  }, []);
+
+  return {
+    ...ficha,
+    tags: canonicalTags,
+  };
+};
+
 export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
   const { user } = useAuth();
   const normalizedTagFilters = normalizeTags(tagFilters);
@@ -76,8 +118,10 @@ export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
 
       const fichas = (data as Ficha[]) ?? [];
       const normalizedFichas = fichas.map((ficha) => syncArchivedState(ficha));
+      const preferredTagByKey = buildPreferredTagByKey(normalizedFichas);
+      const canonicalFichas = normalizedFichas.map((ficha) => canonicalizeFichaTags(ficha, preferredTagByKey));
 
-      const fichasToNormalize = normalizedFichas.filter((ficha, index) => !isArchiveStateSynced(fichas[index], ficha));
+      const fichasToNormalize = canonicalFichas.filter((ficha, index) => !isArchiveStateSynced(fichas[index], ficha));
 
       if (fichasToNormalize.length > 0 && user) {
         void Promise.allSettled(
@@ -92,12 +136,12 @@ export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
       }
 
       if (normalizedTagFilters.length === 0) {
-        return normalizedFichas;
+        return canonicalFichas;
       }
 
-      return normalizedFichas.filter((ficha) => {
-        const fichaTags = new Set(ficha.tags ?? []);
-        return normalizedTagFilters.every((tag) => fichaTags.has(tag));
+      return canonicalFichas.filter((ficha) => {
+        const fichaTagKeys = new Set((ficha.tags ?? []).map((tag) => normalizeTag(tag)));
+        return normalizedTagFilters.every((tag) => fichaTagKeys.has(normalizeTag(tag)));
       });
     },
     enabled: !!user,

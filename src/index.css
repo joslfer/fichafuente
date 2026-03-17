@@ -246,6 +246,30 @@
   animation: search-icon-pop 0.22s ease-out;
 }
 
+.tag-hop {
+  will-change: transform;
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tag-hop:hover {
+  transform: translateY(-4px) scale(1.04);
+}
+
+/* Hide scrollbars on mobile while preserving scroll behavior. */
+@media (max-width: 767px) {
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+    background: transparent;
+  }
+}
+
 
 .prose p:empty {
   height: 1em;

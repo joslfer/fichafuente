@@ -3,7 +3,7 @@ import type { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Code2 } from "lucide-react";
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Code2, Highlighter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
@@ -77,11 +77,13 @@ const applySlashCommandAtCursor = (editor: Editor, requireTrailingSpace: boolean
   // Delete slash token first so mark toggles (e.g. /bold) persist for next input.
   editor.chain().focus().deleteRange({ from, to }).run();
 
-  return runSlashCommand(editor, command);
+  return runSlashCommand(editor, command) ? command : null;
 };
 
 const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ content, onChange }, ref) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const slashCommandActiveRef = useRef(false);
+  const lastEnterAtRef = useRef(0);
   const [toolbarState, setToolbarState] = useState({
     visible: false,
     x: 0,
@@ -112,15 +114,19 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
     onUpdate: ({ editor }) => {
       // Mobile keyboards often skip predictable keydown timing for space.
       // Processing here makes slash commands reliable after typing '/command '.
-      applySlashCommandAtCursor(editor, true);
+      const command = applySlashCommandAtCursor(editor, true);
+      if (command) {
+        slashCommandActiveRef.current = true;
+      }
       onChange(editor.getHTML());
     },
     editorProps: {
       handleTextInput: (view, _from, _to, text) => {
         if (text !== " ") return false;
 
-        const didApply = applySlashCommandAtCursor(editor, false);
-        if (!didApply) return false;
+        const command = applySlashCommandAtCursor(editor, false);
+        if (!command) return false;
+        slashCommandActiveRef.current = true;
 
         return true;
       },
@@ -128,6 +134,28 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
         if (event.key !== " " && event.key !== "Enter") return false;
 
         if (event.key === "Enter") {
+          if (!event.shiftKey && !event.metaKey && !event.ctrlKey) {
+            const now = performance.now();
+            const isDoubleEnter = now - lastEnterAtRef.current < 420;
+            lastEnterAtRef.current = now;
+
+            const { state } = view;
+            const { $from } = state.selection;
+            const isEmptyBlock = $from.parent.textContent.trim() === "";
+
+            // Notion-like escape: after slash commands, double Enter on an empty block
+            // returns to a clean default paragraph with no active marks.
+            if (slashCommandActiveRef.current && isDoubleEnter && isEmptyBlock) {
+              event.preventDefault();
+              const didReset = editor?.chain().focus().clearNodes().unsetAllMarks().run();
+              if (!didReset) {
+                editor?.chain().focus().setParagraph().unsetAllMarks().run();
+              }
+              slashCommandActiveRef.current = false;
+              return true;
+            }
+          }
+
           // Double-Enter escape: if the cursor is in a blockquote or list and
           // the current paragraph/item is empty, exit the block to a plain paragraph.
           if (!event.shiftKey && !event.metaKey && !event.ctrlKey) {
@@ -154,8 +182,9 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
             }
           }
 
-          const didApply = applySlashCommandAtCursor(editor, false);
-          if (!didApply) return false;
+          const command = applySlashCommandAtCursor(editor, false);
+          if (!command) return false;
+          slashCommandActiveRef.current = true;
           event.preventDefault();
           return true;
         }
@@ -326,6 +355,9 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
         </ToolBtn>
         <ToolBtn title="Código" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
           <Code2 className="w-3.5 h-3.5" />
+        </ToolBtn>
+        <ToolBtn title="Resaltar" active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleHighlight().run()}>
+          <Highlighter className="w-3.5 h-3.5" />
         </ToolBtn>
         <div className="mx-1 h-4 w-px bg-border" />
         <ToolBtn title="Cita" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>

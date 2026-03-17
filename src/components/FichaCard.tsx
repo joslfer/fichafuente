@@ -145,13 +145,17 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10"
+            className="absolute top-4 right-4 h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-100 ease-out z-10"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuContent
+          align="end"
+          className="w-48 data-[state=open]:[animation-duration:110ms] data-[state=closed]:[animation-duration:80ms] data-[state=open]:[animation-timing-function:cubic-bezier(0.22,1,0.36,1)] data-[state=closed]:[animation-timing-function:cubic-bezier(0.4,0,1,1)]"
+          onClick={(e) => e.stopPropagation()}
+        >
           <DropdownMenuItem onClick={() => onEdit(ficha)}>
             <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
           </DropdownMenuItem>
@@ -159,7 +163,10 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
             <FileDown className="w-3.5 h-3.5 mr-2" /> Exportar PDF
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+          <DropdownMenuItem
+            onClick={handleDelete}
+            className="text-destructive focus:bg-destructive/15 focus:text-destructive data-[highlighted]:bg-destructive/15 data-[highlighted]:text-destructive"
+          >
             <Trash2 className="w-3.5 h-3.5 mr-2" /> Eliminar
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -243,7 +250,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
           {orderTagsForDisplay(ficha.tags).map((tag) => (
             <span
               key={tag}
-              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-100 hover:-translate-y-px ${
+              className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-100 hover:-translate-y-px ${
                 isArchivedTag(tag)
                   ? "ml-auto bg-secondary text-foreground/80 border border-border hover:bg-secondary/90"
                   : "bg-badge text-badge-foreground hover:bg-badge/80"

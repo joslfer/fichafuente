@@ -14,21 +14,44 @@ export function normalizeTag(tag: string) {
     .replace(/\s+/g, " ");
 }
 
+function normalizeTagForDisplay(tag: string) {
+  return tag
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function hasDiacritics(text: string) {
+  return text.normalize("NFD") !== text;
+}
+
 export const ARCHIVED_TAG = "archivado";
 
 export function normalizeTags(tags?: string[] | null) {
   if (!tags) return [];
 
-  const uniqueTags = new Set<string>();
+  const uniqueTags = new Map<string, string>();
 
   tags.forEach((tag) => {
-    const normalizedTag = normalizeTag(tag);
-    if (normalizedTag) {
-      uniqueTags.add(normalizedTag);
+    const normalizedTagKey = normalizeTag(tag);
+    if (!normalizedTagKey) return;
+
+    const candidate = normalizeTagForDisplay(tag);
+    if (!candidate) return;
+
+    const existing = uniqueTags.get(normalizedTagKey);
+    if (!existing) {
+      uniqueTags.set(normalizedTagKey, candidate);
+      return;
+    }
+
+    // Prefer the accented variant when both versions are equivalent.
+    if (!hasDiacritics(existing) && hasDiacritics(candidate)) {
+      uniqueTags.set(normalizedTagKey, candidate);
     }
   });
 
-  return Array.from(uniqueTags);
+  return Array.from(uniqueTags.values());
 }
 
 export function isArchivedTag(tag: string) {

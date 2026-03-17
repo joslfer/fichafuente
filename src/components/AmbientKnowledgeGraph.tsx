@@ -9,6 +9,7 @@ type AmbientKnowledgeGraphProps = {
   items: GraphItem[];
   className?: string;
   centerAvoidRadius?: number;
+  perturbSignal?: number;
 };
 
 type NodeState = {
@@ -68,9 +69,12 @@ const AmbientKnowledgeGraph = ({
   items,
   className,
   centerAvoidRadius = 56,
+  perturbSignal = 0,
 }: AmbientKnowledgeGraphProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const perturbStrengthRef = useRef(0);
+  const lastPerturbSignalRef = useRef(perturbSignal);
 
   const model = useMemo(() => {
     const count = items.length;
@@ -109,6 +113,12 @@ const AmbientKnowledgeGraph = ({
 
     return { count, edges: normalizedEdges };
   }, [items]);
+
+  useEffect(() => {
+    if (perturbSignal === lastPerturbSignalRef.current) return;
+    lastPerturbSignalRef.current = perturbSignal;
+    perturbStrengthRef.current = Math.min(2.2, perturbStrengthRef.current + 1.5);
+  }, [perturbSignal]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -235,6 +245,12 @@ const AmbientKnowledgeGraph = ({
       }
 
       for (const node of nodes) {
+        const perturbStrength = perturbStrengthRef.current;
+        if (perturbStrength > 0.0001) {
+          node.vx += (Math.random() - 0.5) * 1.25 * perturbStrength;
+          node.vy += (Math.random() - 0.5) * 1.25 * perturbStrength;
+        }
+
         node.vx += (centerX - node.x) * CENTER_PULL;
         node.vy += (centerY - node.y) * CENTER_PULL;
 
@@ -284,6 +300,8 @@ const AmbientKnowledgeGraph = ({
           node.vy *= -0.55;
         }
       }
+
+      perturbStrengthRef.current *= 0.94;
     };
 
     const draw = (now: number) => {

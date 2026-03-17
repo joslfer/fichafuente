@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Ficha, useCreateFicha, useUpdateFicha } from "@/hooks/useFichas";
 import TiptapEditor, { type TiptapEditorHandle } from "@/components/TiptapEditor";
-import { isArchivedTag, normalizeTag, normalizeTags, orderTagsForDisplay } from "@/lib/utils";
+import { isArchivedTag, normalizeTags, orderTagsForDisplay } from "@/lib/utils";
 
 type FichaFormProps = {
   open: boolean;
@@ -195,11 +195,11 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   }, [html, sourceName, sourceUrl, tags, authorsText, showAuthorsField, editingFicha, open]);
 
   const handleAddTag = () => {
-    const tag = normalizeTag(tagsInput);
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag]);
-      setTagsInput("");
+    const nextTags = normalizeTags([...tags, tagsInput]);
+    if (nextTags.length !== tags.length) {
+      setTags(nextTags);
     }
+    setTagsInput("");
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent) => {
@@ -219,6 +219,11 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
       .forEach((author) => uniqueAuthors.add(author));
 
     return Array.from(uniqueAuthors);
+  };
+
+  const areStringArraysEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false;
+    return a.every((value, index) => value === b[index]);
   };
 
   const handlePasteSourceUrl = async () => {
@@ -281,6 +286,27 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
     };
 
     if (editingFicha) {
+      const existingTags = normalizeTags(editingFicha.tags);
+      const existingAuthors = editingFicha.authors || [];
+      const nextTags = fichaData.tags;
+      const nextAuthors = fichaData.authors;
+
+      const hasChanges =
+        editingFicha.title !== fichaData.title ||
+        (editingFicha.content || "") !== fichaData.content ||
+        editingFicha.source_name !== fichaData.source_name ||
+        (editingFicha.source_url || null) !== fichaData.source_url ||
+        editingFicha.is_public !== fichaData.is_public ||
+        editingFicha.public_slug !== fichaData.public_slug ||
+        !areStringArraysEqual(existingTags, nextTags) ||
+        !areStringArraysEqual(existingAuthors, nextAuthors);
+
+      if (!hasChanges) {
+        onOpenChange(false);
+        resetForm();
+        return;
+      }
+
       await updateFicha.mutateAsync({ id: editingFicha.id, ...fichaData });
     } else {
       await createFicha.mutateAsync(fichaData);
@@ -369,9 +395,13 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               </Label>
               {/* Draft status — right-aligned, very subtle */}
               {!editingFicha && draftStatus !== "idle" && (
-                <span className="ml-auto mr-6 flex items-center gap-1 text-[10px] text-muted-foreground/40 transition-opacity duration-500">
+                <span
+                  className="ml-auto mr-6 flex items-center text-[10px] text-muted-foreground/40 transition-opacity duration-500"
+                  title={draftStatus === "saving" ? "Guardando" : "Guardado"}
+                  aria-live="polite"
+                >
                   <Save className="w-2.5 h-2.5" />
-                  {draftStatus === "saving" ? "Guardando…" : "Guardado"}
+                  <span className="sr-only">{draftStatus === "saving" ? "Guardando" : "Guardado"}</span>
                 </span>
               )}
               {!editingFicha && draftBanner && draftStatus === "idle" && (
@@ -471,7 +501,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               {orderTagsForDisplay(tags).map((tag) => (
                 <span
                   key={tag}
-                  className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                  className={`tag-hop inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all duration-100 hover:-translate-y-px ${
                     isArchivedTag(tag)
                       ? "bg-muted text-muted-foreground border border-border"
                       : "bg-badge text-badge-foreground"
