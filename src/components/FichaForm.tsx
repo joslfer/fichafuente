@@ -25,6 +25,30 @@ type FormDraft = {
   showAuthorsField: boolean;
 };
 
+const hasMeaningfulHtml = (value: string) => {
+  if (!value) return false;
+
+  const container = document.createElement("div");
+  container.innerHTML = value;
+  const text = (container.textContent || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\u200b/g, "")
+    .trim();
+
+  if (text.length > 0) return true;
+  return Boolean(container.querySelector("img, video, iframe, table, hr, pre"));
+};
+
+const hasMeaningfulDraftContent = (draft: FormDraft) => {
+  return Boolean(
+    hasMeaningfulHtml(draft.html) ||
+    draft.sourceName.trim() ||
+    draft.sourceUrl.trim() ||
+    draft.tags.length > 0 ||
+    draft.authorsText.trim()
+  );
+};
+
 const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   const createFicha = useCreateFicha();
   const updateFicha = useUpdateFicha();
@@ -134,6 +158,11 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
         const saved = localStorage.getItem(DRAFT_KEY);
         if (saved) {
           const draft: FormDraft = JSON.parse(saved);
+          if (!hasMeaningfulDraftContent(draft)) {
+            localStorage.removeItem(DRAFT_KEY);
+            resetForm();
+            return;
+          }
           setHtml(draft.html ?? "");
           setSourceName(draft.sourceName ?? "");
           setSourceUrl(draft.sourceUrl ?? "");
@@ -177,10 +206,21 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
   // Debounced auto-save draft (new fichas only).
   useEffect(() => {
     if (editingFicha || !open) return;
+
+    const draft: FormDraft = { html, sourceName, sourceUrl, tags, authorsText, showAuthorsField };
+
+    if (!hasMeaningfulDraftContent(draft)) {
+      if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
+      if (draftStatusTimerRef.current) window.clearTimeout(draftStatusTimerRef.current);
+      localStorage.removeItem(DRAFT_KEY);
+      setDraftStatus("idle");
+      setDraftBanner(false);
+      return;
+    }
+
     if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
     setDraftStatus("saving");
     draftTimerRef.current = window.setTimeout(() => {
-      const draft: FormDraft = { html, sourceName, sourceUrl, tags, authorsText, showAuthorsField };
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       } catch { /* quota exceeded — ignore */ }
@@ -527,7 +567,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
 
           <div className="flex items-center justify-end gap-2 pt-2">
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="ghost" onClick={handleCloseWithReset}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={!title}>

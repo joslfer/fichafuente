@@ -121,7 +121,7 @@ useEffect(() => {
       {isOwner && (
         <a
           href="/"
-          className="sm:hidden fixed left-4 bottom-4 z-30 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/90 px-3 py-2 text-xs font-medium text-foreground shadow-md backdrop-blur-sm active:scale-[0.98] transition-transform"
+          className="sm:hidden fixed right-4 bottom-6 z-30 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/90 px-3 py-2 text-xs font-medium text-foreground shadow-md backdrop-blur-sm active:scale-[0.98] transition-transform"
           aria-label="Volver a la grid"
           title="Volver a la grid"
         >

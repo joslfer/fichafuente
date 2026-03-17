@@ -151,7 +151,6 @@
   input[type="search"] {
     -webkit-user-select: text;
     user-select: text;
-    -webkit-touch-callout: none;
   }
 }
 
@@ -255,6 +254,398 @@
   transform: translateY(-4px) scale(1.04);
 }
 
+@keyframes ficha-laser-destroy {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg) translateY(0);
+    filter: brightness(1) saturate(1);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.01) rotate(-0.4deg) translateY(3px);
+    filter: brightness(2.15) saturate(2.05) contrast(1.15);
+  }
+  44% {
+    opacity: 0.88;
+    transform: scale(0.985) rotate(0.35deg) translateY(42px);
+    filter: brightness(2.05) saturate(2.1) contrast(1.12);
+  }
+  72% {
+    opacity: 0.42;
+    transform: scale(0.95) rotate(0.15deg) translateY(92px);
+    filter: brightness(1.86) saturate(1.8) contrast(1.04);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.93) rotate(0deg) translateY(156px);
+    filter: brightness(1.55) saturate(1.45) blur(1.2px);
+  }
+}
+
+@keyframes ficha-meltdown-overlay {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.3;
+  }
+  62% {
+    opacity: 0.42;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ficha-meltdown-text {
+  0% {
+    color: inherit;
+  }
+  45% {
+    color: hsl(0 100% 70% / 0.94);
+  }
+  100% {
+    color: hsl(0 100% 62% / 0);
+  }
+}
+
+@keyframes ficha-meltdown-border {
+  0% {
+    border-color: hsl(var(--border));
+    box-shadow: 0 0 0 hsl(0 100% 56% / 0);
+  }
+  52% {
+    border-color: hsl(0 100% 64% / 0.9);
+    box-shadow: 0 0 22px hsl(0 100% 56% / 0.38), inset 0 0 24px hsl(0 100% 58% / 0.24);
+  }
+  100% {
+    border-color: hsl(0 100% 62% / 0);
+    box-shadow: 0 0 0 hsl(0 100% 56% / 0), inset 0 0 0 hsl(0 100% 58% / 0);
+  }
+}
+
+@keyframes ficha-laser-vibrate {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-0.6px, 0.4px);
+  }
+  40% {
+    transform: translate(0.8px, -0.4px);
+  }
+  60% {
+    transform: translate(-0.4px, -0.3px);
+  }
+  80% {
+    transform: translate(0.6px, 0.2px);
+  }
+}
+
+@keyframes ficha-laser-hold {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ficha-laser-precharge {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--laser-angle)) scaleX(0.2);
+    transform-origin: 0 50%;
+    filter: blur(0.7px) brightness(1.15);
+  }
+  22% {
+    opacity: 0.9;
+    transform: rotate(var(--laser-angle)) scaleX(0.62);
+  }
+  76% {
+    opacity: 0.92;
+    transform: rotate(var(--laser-angle)) scaleX(0.88);
+  }
+  100% {
+    opacity: 0.95;
+    transform: rotate(var(--laser-angle)) scaleX(0.94);
+    transform-origin: 0 50%;
+    filter: blur(0.85px) brightness(1.22);
+  }
+}
+
+@keyframes ficha-laser-rugged-glow {
+  0% {
+    filter: brightness(1.05) saturate(1.2);
+    box-shadow:
+      0 0 16px hsl(0 100% 42% / 0.98),
+      0 0 38px hsl(0 100% 36% / 0.92),
+      0 0 74px hsl(0 100% 30% / 0.84);
+  }
+  50% {
+    filter: brightness(1.2) saturate(1.5);
+    box-shadow:
+      0 0 18px hsl(0 100% 46% / 1),
+      0 0 44px hsl(0 100% 40% / 0.95),
+      0 0 84px hsl(0 100% 34% / 0.88);
+  }
+  100% {
+    filter: brightness(1.08) saturate(1.24);
+    box-shadow:
+      0 0 15px hsl(0 100% 40% / 0.96),
+      0 0 36px hsl(0 100% 34% / 0.9),
+      0 0 70px hsl(0 100% 28% / 0.82);
+  }
+}
+
+@keyframes ficha-overheat-core {
+  0% {
+    opacity: 0.28;
+    transform: translate(-50%, -50%) scale(0.36);
+    filter: blur(2.1px) saturate(1.42) brightness(1.16);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.78);
+    filter: blur(1.15px) saturate(2.15) brightness(1.36);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.16);
+    filter: blur(1.9px) saturate(2.3) brightness(1.52);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.44);
+    filter: blur(4.5px) saturate(1.56) brightness(1.34);
+  }
+}
+
+@keyframes ficha-overheat-border {
+  0% {
+    box-shadow:
+      0 0 0 1px hsl(0 100% 60% / 0.18) inset,
+      0 0 0 hsl(0 100% 55% / 0);
+    filter: saturate(1.02);
+  }
+  24% {
+    box-shadow:
+      0 0 0 1px hsl(0 100% 66% / 0.72) inset,
+      0 0 24px hsl(0 100% 58% / 0.34),
+      0 0 42px hsl(8 100% 52% / 0.28);
+    filter: saturate(1.24);
+  }
+  62% {
+    box-shadow:
+      0 0 0 1px hsl(0 100% 70% / 0.88) inset,
+      0 0 34px hsl(0 100% 60% / 0.46),
+      0 0 58px hsl(10 100% 54% / 0.34);
+    filter: saturate(1.38);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px hsl(0 100% 65% / 0.28) inset,
+      0 0 12px hsl(0 100% 58% / 0.14);
+    filter: saturate(1.08);
+  }
+}
+
+.ficha-laser-destroy {
+  animation: ficha-laser-destroy 0.52s cubic-bezier(0.22, 0.88, 0.2, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+.ficha-laser-destroy::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at var(--impact-x) var(--impact-y), hsl(0 100% 62% / 0.58) 0%, hsl(0 100% 50% / 0.32) 30%, hsl(0 100% 42% / 0.08) 54%, hsl(0 0% 0% / 0) 76%);
+  animation: ficha-meltdown-overlay 0.66s ease-out forwards;
+}
+
+.ficha-laser-destroy,
+.ficha-laser-destroy :is(.tag-hop, .ficha-preview-content blockquote, a, button) {
+  animation: ficha-meltdown-border 0.66s ease-out forwards;
+}
+
+.ficha-laser-destroy :is(h3, p, span, a, button, mark, svg) {
+  animation: ficha-meltdown-text 0.66s ease-out forwards;
+}
+
+.ficha-laser-beam-fixed {
+  position: fixed;
+  left: var(--laser-start-x);
+  top: var(--laser-start-y);
+  width: var(--laser-length);
+  height: 11px;
+  border-radius: 999px;
+  transform-origin: 0 50%;
+  transform: rotate(var(--laser-angle));
+  background: linear-gradient(
+    90deg,
+    hsl(0 100% 40% / 0) 0%,
+    hsl(0 100% 34% / 0.98) 12%,
+    hsl(0 100% 46% / 1) 50%,
+    hsl(0 100% 34% / 0.98) 88%,
+    hsl(0 100% 40% / 0) 100%
+  );
+  box-shadow:
+    0 0 16px hsl(0 100% 42% / 0.98),
+    0 0 38px hsl(0 100% 36% / 0.92),
+    0 0 74px hsl(0 100% 30% / 0.84);
+  animation:
+    ficha-laser-hold 1s steps(10, end) forwards,
+    ficha-laser-rugged-glow 0.11s steps(2, end) infinite;
+  z-index: 90;
+}
+
+.ficha-laser-precharge {
+  position: fixed;
+  left: var(--laser-start-x);
+  top: var(--laser-start-y);
+  width: var(--laser-length);
+  height: 4px;
+  border-radius: 999px;
+  transform-origin: 0 50%;
+  transform: rotate(var(--laser-angle));
+  background: linear-gradient(
+    90deg,
+    hsl(0 100% 36% / 0),
+    hsl(0 100% 40% / 0.9) 18%,
+    hsl(0 100% 48% / 0.95) 52%,
+    hsl(0 100% 36% / 0)
+  );
+  box-shadow:
+    0 0 10px hsl(0 100% 42% / 0.82),
+    0 0 24px hsl(0 100% 36% / 0.7);
+  animation: ficha-laser-precharge 0.32s ease-out forwards;
+  z-index: 91;
+}
+
+.ficha-overheat-core {
+  position: absolute;
+  left: var(--impact-x);
+  top: var(--impact-y);
+  width: 118px;
+  height: 118px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    hsl(0 100% 76% / 1) 0%,
+    hsl(0 100% 62% / 0.95) 26%,
+    hsl(0 100% 48% / 0.44) 54%,
+    hsl(0 100% 40% / 0) 80%
+  );
+  mix-blend-mode: screen;
+  animation: ficha-overheat-core 1s ease-out forwards;
+}
+
+.ficha-overheat-border {
+  animation: ficha-overheat-border 1s ease-in-out forwards;
+}
+
+.ficha-laser-vibrate {
+  animation:
+    ficha-overheat-border 1s ease-in-out forwards,
+    ficha-laser-vibrate 0.08s linear infinite;
+}
+
+.mobile-card-focus {
+  border-color: hsl(var(--border));
+  box-shadow: 0 10px 24px hsl(var(--foreground) / 0.08), 0 0 0 1px hsl(var(--foreground) / 0.06);
+}
+
+@keyframes ficha-destruction-flare {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  24% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes ficha-destruction-shockwave {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  18% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.55);
+  }
+}
+
+@keyframes ficha-destruction-afterglow {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  22% {
+    opacity: 0.42;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.22);
+  }
+}
+
+@keyframes ficha-destruction-spark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle)) translateX(0) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle)) translateX(var(--spark-distance)) scale(0.3);
+  }
+}
+
+.ficha-destruction-flare {
+  position: absolute;
+  left: var(--impact-x);
+  top: var(--impact-y);
+  width: 220px;
+  height: 220px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: radial-gradient(circle, hsl(0 100% 72% / 0.96) 0%, hsl(0 100% 60% / 0.82) 24%, hsl(0 100% 45% / 0.24) 48%, hsl(0 0% 0% / 0) 70%);
+  mix-blend-mode: screen;
+  animation: ficha-destruction-flare 0.42s ease-out forwards;
+}
+
+.ficha-destruction-afterglow {
+  position: absolute;
+  left: var(--impact-x);
+  top: var(--impact-y);
+  width: 260px;
+  height: 260px;
+  border-radius: 999px;
+  background: radial-gradient(circle, hsl(0 100% 62% / 0.35) 0%, hsl(0 100% 48% / 0.18) 28%, hsl(0 100% 36% / 0.08) 44%, hsl(0 0% 0% / 0) 72%);
+  mix-blend-mode: screen;
+  animation: ficha-destruction-afterglow 0.55s ease-out 0.12s forwards;
+}
+
 /* Hide scrollbars on mobile while preserving scroll behavior. */
 @media (max-width: 767px) {
   * {
@@ -267,6 +658,43 @@
     height: 0;
     display: none;
     background: transparent;
+  }
+
+  .ficha-laser-beam-fixed {
+    height: 13px;
+    box-shadow:
+      0 0 18px hsl(0 100% 42% / 1),
+      0 0 42px hsl(0 100% 36% / 0.94),
+      0 0 82px hsl(0 100% 30% / 0.84);
+  }
+
+  .ficha-laser-precharge {
+    height: 5px;
+  }
+
+  .ficha-destruction-flare {
+    width: 180px;
+    height: 180px;
+  }
+
+  .ficha-destruction-shockwave {
+    width: 150px;
+    height: 150px;
+  }
+
+  .ficha-destruction-afterglow {
+    width: 210px;
+    height: 210px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .tag-hop:hover {
+    transform: none;
+  }
+
+  .group:hover {
+    box-shadow: inherit;
   }
 }
 
@@ -332,6 +760,11 @@
   padding-left: 0.8rem;
   margin: 0.75em 0;
   color: hsl(var(--muted-foreground));
+}
+
+/* Hide inline images in grid previews (cards) while keeping images in full views/editors. */
+.ficha-preview-content img {
+  display: none !important;
 }
 
 .public-ficha-content p { margin-bottom: 0.45em; min-height: 0; }

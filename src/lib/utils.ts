@@ -6,9 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function normalizeTag(tag: string) {
-  return tag
+  const enyeProtected = tag
+    .replace(/Ñ/g, "__ENYE_UPPER__")
+    .replace(/ñ/g, "__ENYE_LOWER__");
+
+  return enyeProtected
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/__ENYE_UPPER__/g, "Ñ")
+    .replace(/__ENYE_LOWER__/g, "ñ")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ");

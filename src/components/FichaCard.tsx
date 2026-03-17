@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ExternalLink, Hash, Calendar, MoreHorizontal, Trash2, Pencil, FileDown } from "lucide-react";
 import { exportFichaToPDF } from "@/lib/exportPDF";
 import { Ficha, useDeleteFicha } from "@/hooks/useFichas";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { createPortal } from "react-dom";
 import DoiBadge from "@/components/DoiBadge";
 import { isArchivedTag, isDoiSourceUrl, orderTagsForDisplay } from "@/lib/utils";
 
@@ -19,6 +20,16 @@ type FichaCardProps = {
   ficha: Ficha;
   onEdit: (ficha: Ficha) => void;
   searchQuery?: string;
+  isCenteredMobile?: boolean;
+};
+
+type LaserPath = {
+  sourceX: number;
+  sourceY: number;
+  length: number;
+  angle: number;
+  impactX: number;
+  impactY: number;
 };
 
 const highlightText = (text: string, query: string) => {
@@ -50,15 +61,66 @@ const hasMeaningfulContent = (html?: string | null) => {
   return Boolean(container.querySelector("img, video, iframe, table, hr, pre"));
 };
 
-const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const buildRandomLaserPath = (rect: DOMRect): LaserPath => {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const targetX = rect.left + rect.width / 2;
+  const targetY = rect.top + rect.height / 2;
+  const edge = Math.floor(Math.random() * 4);
+
+  let sourceX = 0;
+  let sourceY = 0;
+
+  if (edge === 0) {
+    sourceX = Math.random() * viewportWidth;
+    sourceY = -40;
+  } else if (edge === 1) {
+    sourceX = viewportWidth + 40;
+    sourceY = Math.random() * viewportHeight;
+  } else if (edge === 2) {
+    sourceX = Math.random() * viewportWidth;
+    sourceY = viewportHeight + 40;
+  } else {
+    sourceX = -40;
+    sourceY = Math.random() * viewportHeight;
+  }
+
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+  const length = Math.hypot(dx, dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  return {
+    sourceX,
+    sourceY,
+    length,
+    angle,
+    impactX: clamp(((targetX - rect.left) / rect.width) * 100, 0, 100),
+    impactY: clamp(((targetY - rect.top) / rect.height) * 100, 0, 100),
+  };
+};
+
+const FichaCard = ({ ficha, onEdit, searchQuery, isCenteredMobile = false }: FichaCardProps) => {
   const deleteFicha = useDeleteFicha();
+  const cardRef = useRef<HTMLElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
   const previewContentRef = useRef<HTMLDivElement>(null);
+  const prechargeTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const laserTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const deleteTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const [previewOffset, setPreviewOffset] = useState(0);
   const [maxPreviewOffset, setMaxPreviewOffset] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
+  const [deletePhase, setDeletePhase] = useState<"idle" | "precharge" | "charging" | "destroying">("idle");
+  const [laserPath, setLaserPath] = useState<LaserPath | null>(null);
   const isArchived = Boolean(ficha.archived_at);
   const canOpenPublicPreview = Boolean(ficha.public_slug) && !isArchived;
+  const orderedTags = orderTagsForDisplay(ficha.tags ?? []);
+  const hasTagOverflow = orderedTags.length > 32;
+  const visibleTags = showAllTags ? orderedTags : orderedTags.slice(0, 32);
 
   const handleClick = () => {
     if (canOpenPublicPreview) {
@@ -67,7 +129,31 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
   };
 
   const handleDelete = () => {
-    deleteFicha.mutate(ficha.id);
+    if (deletePhase !== "idle" || deleteFicha.isPending) return;
+
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setMenuOpen(false);
+    setLaserPath(buildRandomLaserPath(rect));
+    setDeletePhase("precharge");
+
+    prechargeTimerRef.current = window.setTimeout(() => {
+      setDeletePhase("charging");
+    }, 110);
+
+    laserTimerRef.current = window.setTimeout(() => {
+      setDeletePhase("destroying");
+    }, 1110);
+
+    deleteTimerRef.current = window.setTimeout(() => {
+      deleteFicha.mutate(ficha.id, {
+        onError: () => {
+          setDeletePhase("idle");
+          setLaserPath(null);
+        },
+      });
+    }, 1680);
   };
 
   const hasContent = hasMeaningfulContent(ficha.content);
@@ -81,6 +167,24 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
     window.addEventListener("scroll", closeMenu, true);
     return () => window.removeEventListener("scroll", closeMenu, true);
   }, [menuOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (laserTimerRef.current) {
+        window.clearTimeout(laserTimerRef.current);
+      }
+      if (prechargeTimerRef.current) {
+        window.clearTimeout(prechargeTimerRef.current);
+      }
+      if (deleteTimerRef.current) {
+        window.clearTimeout(deleteTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setShowAllTags(false);
+  }, [ficha.id]);
 
   useEffect(() => {
     if (!hasContent || !previewViewportRef.current || !previewContentRef.current) {
@@ -137,9 +241,51 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
 
   
 
+  const laserStyle = laserPath
+    ? ({
+        ["--laser-start-x" as any]: `${laserPath.sourceX}px`,
+        ["--laser-start-y" as any]: `${laserPath.sourceY}px`,
+        ["--laser-length" as any]: `${laserPath.length}px`,
+        ["--laser-angle" as any]: `${laserPath.angle}deg`,
+      } as CSSProperties)
+    : undefined;
+
+  const impactStyle = laserPath
+    ? ({
+        ["--impact-x" as any]: `${laserPath.impactX}%`,
+        ["--impact-y" as any]: `${laserPath.impactY}%`,
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <article
-      className="group relative bg-card rounded-lg border border-border/60 p-5 shadow-sm hover:shadow-md hover:border-border transition-all duration-200 flex flex-col min-h-[280px]"    >
+    <>
+      {deletePhase === "precharge" && laserPath && typeof document !== "undefined" &&
+        createPortal(
+          <div className="pointer-events-none fixed inset-0 z-[90]">
+            <div className="ficha-laser-precharge" style={laserStyle} />
+          </div>,
+          document.body
+        )}
+
+      {deletePhase === "charging" && laserPath && typeof document !== "undefined" &&
+        createPortal(
+          <div className="pointer-events-none fixed inset-0 z-[90]">
+            <div className="ficha-laser-beam-fixed" style={laserStyle} />
+          </div>,
+          document.body
+        )}
+
+      <article
+      ref={cardRef}
+      data-ficha-card-id={ficha.id}
+      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${isCenteredMobile ? "mobile-card-focus" : ""} ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
+    >
+      {deletePhase === "charging" && (
+        <div className="pointer-events-none absolute inset-0 z-20">
+          <div className="ficha-overheat-core" style={impactStyle} />
+        </div>
+      )}
+
       <DropdownMenu modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -165,6 +311,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleDelete}
+            disabled={deletePhase !== "idle" || deleteFicha.isPending}
             className="text-destructive focus:bg-destructive/15 focus:text-destructive data-[highlighted]:bg-destructive/15 data-[highlighted]:text-destructive"
           >
             <Trash2 className="w-3.5 h-3.5 mr-2" /> Eliminar
@@ -245,9 +392,9 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
       )}
 
       {/* Tags */}
-      {ficha.tags && ficha.tags.length > 0 && (
+      {orderedTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3 justify-start">
-          {orderTagsForDisplay(ficha.tags).map((tag) => (
+          {visibleTags.map((tag) => (
             <span
               key={tag}
               className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-100 hover:-translate-y-px ${
@@ -260,6 +407,15 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
               {tag}
             </span>
           ))}
+          {hasTagOverflow && (
+            <button
+              type="button"
+              onClick={() => setShowAllTags((prev) => !prev)}
+              className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+            >
+              {showAllTags ? "menos tags" : "más tags"}
+            </button>
+          )}
         </div>
       )}
 
@@ -272,7 +428,8 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
           </span>
         )}
       </div>
-    </article>
+      </article>
+    </>
   );
 };
 

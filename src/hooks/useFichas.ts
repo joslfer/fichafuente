@@ -216,7 +216,6 @@ export const useDeleteFicha = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fichas"] });
-      toast.success("Ficha eliminada");
     },
     onError: (error) => {
       toast.error(`Error al eliminar: ${getErrorMessage(error, "desconocido")}`);

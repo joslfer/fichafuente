@@ -5,7 +5,7 @@ import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Code2, Highlighter } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 type TiptapEditorProps = {
   content: string;
@@ -90,6 +90,14 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
     y: 0,
     placement: "above" as "above" | "below",
   });
+
+  const disableFloatingToolbar = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isIPadOSDesktopUA = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    return isIOS || isIPadOSDesktopUA;
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -205,10 +213,15 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
   }, [content]);
 
   useImperativeHandle(ref, () => ({
-    focus: () => { editor?.chain().focus('end').run(); },
+    focus: () => { editor?.chain().focus("end").run(); },
   }), [editor]);
 
   const updateFloatingToolbar = useCallback(() => {
+    if (disableFloatingToolbar) {
+      setToolbarState((prev) => ({ ...prev, visible: false }));
+      return;
+    }
+
     if (!editor || !editor.isEditable) {
       setToolbarState((prev) => ({ ...prev, visible: false }));
       return;
@@ -259,7 +272,7 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
       y: top,
       placement,
     });
-  }, [editor]);
+  }, [editor, disableFloatingToolbar]);
 
   useEffect(() => {
     if (!editor) return;
@@ -331,46 +344,48 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
 
   return (
     <div className="rounded-2xl border border-input bg-card overflow-visible">
-      <div
-        ref={toolbarRef}
-        style={{ left: `${toolbarState.x}px`, top: `${toolbarState.y}px` }}
-        className={cn(
-          "fixed z-[70] -translate-x-1/2 rounded-xl border border-border/70 bg-background/95 p-1.5 shadow-lg backdrop-blur-sm transition-all duration-150 ease-out",
-          toolbarState.placement === "above" ? "-translate-y-full" : "translate-y-0",
-          toolbarState.visible ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
-        )}
-      >
-        <div className="inline-flex items-center gap-0.5">
-        <ToolBtn title="Negrita" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
-          <Bold className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Cursiva" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
-          <Italic className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Subrayado" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-          <UnderlineIcon className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Tachado" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
-          <Strikethrough className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Código" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
-          <Code2 className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Resaltar" active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleHighlight().run()}>
-          <Highlighter className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <div className="mx-1 h-4 w-px bg-border" />
-        <ToolBtn title="Cita" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-          <Quote className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Lista" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          <List className="w-3.5 h-3.5" />
-        </ToolBtn>
-        <ToolBtn title="Lista numerada" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-          <ListOrdered className="w-3.5 h-3.5" />
-        </ToolBtn>
+      {!disableFloatingToolbar && (
+        <div
+          ref={toolbarRef}
+          style={{ left: `${toolbarState.x}px`, top: `${toolbarState.y}px` }}
+          className={cn(
+            "fixed z-[70] -translate-x-1/2 rounded-xl border border-border/70 bg-background/95 p-1.5 shadow-lg backdrop-blur-sm transition-all duration-150 ease-out",
+            toolbarState.placement === "above" ? "-translate-y-full" : "translate-y-0",
+            toolbarState.visible ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
+          )}
+        >
+          <div className="inline-flex items-center gap-0.5">
+          <ToolBtn title="Negrita" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
+            <Bold className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <ToolBtn title="Cursiva" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <Italic className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <ToolBtn title="Subrayado" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+            <UnderlineIcon className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <ToolBtn title="Tachado" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
+            <Strikethrough className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <ToolBtn title="Código" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
+            <Code2 className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <ToolBtn title="Resaltar" active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleHighlight().run()}>
+            <Highlighter className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <ToolBtn title="Cita" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            <Quote className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <ToolBtn title="Lista" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <List className="w-3.5 h-3.5" />
+          </ToolBtn>
+          <ToolBtn title="Lista numerada" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListOrdered className="w-3.5 h-3.5" />
+          </ToolBtn>
+          </div>
         </div>
-      </div>
+      )}
       <EditorContent editor={editor} />
     </div>
   );

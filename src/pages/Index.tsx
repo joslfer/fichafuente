@@ -23,6 +23,7 @@ const Index = () => {
   const [graphPerturbSignal, setGraphPerturbSignal] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editingFicha, setEditingFicha] = useState<Ficha | null>(null);
+  const [centeredFichaId, setCenteredFichaId] = useState<string | null>(null);
 
   const { data: fichas, isLoading } = useFichas(searchQuery, tagFilters);
   // Stats are always computed from all fichas (no tag filter) so they don't change when filtering.
@@ -304,6 +305,67 @@ const Index = () => {
     return () => window.removeEventListener("keydown", handleShortcuts);
   }, [formOpen]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isLoading || visibleFichas.length === 0) {
+      setCenteredFichaId(null);
+      return;
+    }
+
+    let frameId = 0;
+
+    const isSingleColumnMobile = () => window.innerWidth < 640;
+
+    const updateCenteredCard = () => {
+      frameId = 0;
+
+      if (!isSingleColumnMobile()) {
+        setCenteredFichaId(null);
+        return;
+      }
+
+      const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-ficha-card-id]"));
+      if (cards.length === 0) {
+        setCenteredFichaId(null);
+        return;
+      }
+
+      const viewportMidY = window.innerHeight / 2;
+      let bestId: string | null = null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      cards.forEach((card) => {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+
+        const cardMidY = rect.top + rect.height / 2;
+        const distance = Math.abs(cardMidY - viewportMidY);
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestId = card.dataset.fichaCardId ?? null;
+        }
+      });
+
+      setCenteredFichaId(bestId);
+    };
+
+    const requestUpdate = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(updateCenteredCard);
+    };
+
+    updateCenteredCard();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+
+    return () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+    };
+  }, [isLoading, visibleFichas]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -477,7 +539,13 @@ const Index = () => {
             className={`grid grid-cols-1 sm:grid-cols-2 ${visibleFichas.length < 3 ? "lg:grid-cols-2" : "lg:grid-cols-3"} gap-5`}
           >
             {visibleFichas.map((ficha) => (
-              <FichaCard key={ficha.id} ficha={ficha} onEdit={handleEdit} searchQuery={searchQuery} />
+              <FichaCard
+                key={ficha.id}
+                ficha={ficha}
+                onEdit={handleEdit}
+                searchQuery={searchQuery}
+                isCenteredMobile={centeredFichaId === ficha.id}
+              />
             ))}
           </div>
         ) : (
