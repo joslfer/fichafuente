@@ -141,6 +141,44 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     return () => document.removeEventListener("keydown", handleNav, true);
   }, [open]);
 
+  // Prevent background grid scroll on mobile while the form dialog is open.
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+
+    const isMobile = window.matchMedia("(max-width: 639px)").matches;
+    if (!isMobile) return;
+
+    const scrollY = window.scrollY;
+    const { body, documentElement } = document;
+
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyPosition = body.style.position;
+    const prevBodyTop = body.style.top;
+    const prevBodyLeft = body.style.left;
+    const prevBodyRight = body.style.right;
+    const prevBodyWidth = body.style.width;
+    const prevHtmlOverflow = documentElement.style.overflow;
+
+    documentElement.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+
+    return () => {
+      documentElement.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.position = prevBodyPosition;
+      body.style.top = prevBodyTop;
+      body.style.left = prevBodyLeft;
+      body.style.right = prevBodyRight;
+      body.style.width = prevBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (editingFicha) {
       const fullHtml = editingFicha.content
