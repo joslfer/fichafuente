@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ClipboardPaste, RotateCcw, Save, X } from "lucide-react";
+import { ClipboardPaste, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ type FichaFormProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingFicha?: Ficha | null;
+  onCreated?: (fichaId: string) => void;
 };
 
 const DRAFT_KEY = "fichafuente_new_ficha_draft";
@@ -49,7 +50,7 @@ const hasMeaningfulDraftContent = (draft: FormDraft) => {
   );
 };
 
-const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
+const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormProps) => {
   const createFicha = useCreateFicha();
   const updateFicha = useUpdateFicha();
 
@@ -281,7 +282,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
         return;
       }
       setSourceUrl(rawText.trim());
-      setLinkPasteFeedback("Pegado");
+      setLinkPasteFeedback(null);
     } catch {
       sourceUrlRef.current?.focus();
       setLinkPasteFeedback("Pega manualmente en el campo");
@@ -349,7 +350,10 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
 
       await updateFicha.mutateAsync({ id: editingFicha.id, ...fichaData });
     } else {
-      await createFicha.mutateAsync(fichaData);
+      const createdFicha = await createFicha.mutateAsync(fichaData);
+      if (createdFicha?.id) {
+        onCreated?.(createdFicha.id);
+      }
       localStorage.removeItem(DRAFT_KEY);
     }
 
@@ -411,12 +415,13 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[36rem] max-h-[90vh] overflow-y-auto overscroll-contain rounded-2xl border-border/70"
+        className="inset-0 left-0 top-0 h-[100dvh] max-h-[100dvh] max-w-none translate-x-0 translate-y-0 overflow-y-auto overscroll-contain rounded-none border-0 p-3 sm:left-[50%] sm:top-[50%] sm:h-[min(42rem,calc(100dvh-2rem))] sm:max-h-[min(42rem,calc(100dvh-2rem))] sm:max-w-[40rem] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-hidden sm:rounded-lg sm:border sm:border-border/70 sm:p-5"
+        onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => { if (hasContent) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (hasContent) e.preventDefault(); }}
       >
         <DialogClose
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+          className="absolute right-4 top-4 z-30 hidden rounded-sm text-destructive/85 opacity-90 ring-offset-background transition-colors hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive/40 focus:ring-offset-2 disabled:pointer-events-none sm:inline-flex"
           onClick={handleCloseWithReset}
         >
           <X className="h-4 w-4" />
@@ -427,8 +432,8 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
           {editingFicha ? "Editar ficha" : "Nueva ficha"}
         </DialogTitle>
 
-        <form onSubmit={handleSubmit} className="space-y-4" data-ficha-form="true">
-          <div>
+        <form onSubmit={handleSubmit} className="space-y-3 sm:flex sm:h-full sm:flex-col sm:space-y-3" data-ficha-form="true">
+          <div className="sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
             <div className="flex items-center gap-2">
               <Label className="text-xs font-medium text-muted-foreground">
                 Contenido (la primera línea será el título)
@@ -444,33 +449,27 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
                   <span className="sr-only">{draftStatus === "saving" ? "Guardando" : "Guardado"}</span>
                 </span>
               )}
-              {!editingFicha && draftBanner && draftStatus === "idle" && (
-                <span className="ml-auto mr-6 flex items-center gap-1 text-[10px] text-muted-foreground/40">
-                  <Save className="w-2.5 h-2.5" />
-                  <span>Borrador</span>
-                  <button
-                    type="button"
-                    onClick={discardDraft}
-                    title="Descartar borrador"
-                    className="inline-flex items-center opacity-60 hover:opacity-100 transition-opacity"
-                  >
-                    <RotateCcw className="w-2.5 h-2.5" />
-                  </button>
-                </span>
-              )}
             </div>
-            <div className="mt-1">
+            <div className="relative mt-1 sm:min-h-0 sm:flex-1">
+              <DialogClose
+                className="absolute right-0.5 top-0.5 z-30 inline-flex h-8 w-8 items-center justify-center rounded-sm text-destructive/85 opacity-90 ring-offset-background transition-colors hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive/40 focus:ring-offset-2 disabled:pointer-events-none sm:hidden"
+                onClick={handleCloseWithReset}
+              >
+                <X className="h-5 w-5" />
+                <span className="sr-only">Cerrar</span>
+              </DialogClose>
               <TiptapEditor
                 ref={editorRef}
                 content={html}
                 onChange={setHtml}
                 placeholder="Título en la primera línea… Luego desarrolla el contenido"
+                className="h-full"
               />
             </div>
           </div>
 
           <div>
-            <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 sm:flex">
               <Label htmlFor="sourceName" className="text-xs font-medium text-muted-foreground">Fuente</Label>
               <Button
                 type="button"
@@ -482,6 +481,10 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
                 {showAuthorsField ? "Ocultar autores" : "(+ añadir autores)"}
               </Button>
             </div>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
+                Fuente
+              </span>
             <textarea
               id="sourceName"
               ref={sourceNameRef}
@@ -489,25 +492,31 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               onChange={(e) => setSourceName(e.target.value)}
               placeholder="Nombre de la fuente"
               rows={2}
-              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
+              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-6 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
             />
+            </div>
           </div>
 
           {showAuthorsField && (
             <div>
-              <Label className="text-xs font-medium text-muted-foreground">Autores</Label>
+              <Label className="hidden text-xs font-medium text-muted-foreground sm:block">Autores</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
+                  Autores
+                </span>
               <textarea
                 ref={authorsRef}
                 value={authorsText}
                 onChange={(e) => setAuthorsText(e.target.value)}
                 rows={2}
-                className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
+                className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-6 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-10 sm:pt-2"
               />
+              </div>
             </div>
           )}
 
           <div>
-            <div className="flex items-center justify-between gap-2">
+            <div className="hidden items-center justify-between gap-2 sm:flex">
               <Label htmlFor="sourceUrl" className="text-xs font-medium text-muted-foreground">Link de la fuente</Label>
               <Button
                 type="button"
@@ -522,6 +531,22 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
                 {isPastingLink ? "Pegando..." : "Pegar link"}
               </Button>
             </div>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
+                Link de la fuente
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handlePasteSourceUrl}
+                disabled={isPastingLink}
+                className="absolute right-2 top-1.5 h-5 px-1.5 text-[11px] font-medium leading-none text-muted-foreground hover:text-foreground sm:hidden"
+                title="Pegar link del portapapeles"
+              >
+                <ClipboardPaste className="mr-1 h-3 w-3" />
+                {isPastingLink ? "Pegando..." : "Pegar"}
+              </Button>
             {linkPasteFeedback && <p className="mt-1 text-[11px] text-muted-foreground">{linkPasteFeedback}</p>}
             <textarea
               id="sourceUrl"
@@ -530,13 +555,14 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               onChange={(e) => setSourceUrl(e.target.value)}
               placeholder="https://..."
               rows={2}
-              className="mt-1 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
+              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-6 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
             />
+            </div>
           </div>
 
           {/* Tags */}
           <div>
-            <Label className="text-xs font-medium text-muted-foreground">Tags</Label>
+            <Label className="hidden text-xs font-medium text-muted-foreground sm:block">Tags</Label>
             <div className="flex flex-wrap gap-1.5 mt-1 mb-2">
               {orderTagsForDisplay(tags).map((tag) => (
                 <span
@@ -560,18 +586,23 @@ const FichaForm = ({ open, onOpenChange, editingFicha }: FichaFormProps) => {
               onChange={(e) => setTagsInput(e.target.value)}
               onKeyDown={handleTagKeyDown}
               onBlur={handleAddTag}
-                placeholder="Añadir tag"
-              className="text-sm rounded-lg focus-visible:ring-0 focus-visible:ring-offset-0"
+              placeholder="Añadir tag"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              name="manual-tags"
+              className="rounded-sm text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" onClick={handleCloseWithReset}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={!title}>
+          <div className="pt-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+              <Button type="submit" disabled={!title} className="h-11 w-full sm:h-9 sm:w-auto">
                 {editingFicha ? "Guardar" : "Crear ficha"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={handleCloseWithReset} className="h-11 w-full sm:h-9 sm:w-auto">
+                Cancelar
               </Button>
             </div>
           </div>

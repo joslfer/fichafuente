@@ -20,6 +20,11 @@ export function normalizeTag(tag: string) {
     .replace(/\s+/g, " ");
 }
 
+export function normalizeTagEquivalenceKey(tag: string) {
+  // Treat n and ñ as equivalent for deduping/canonicalization, while preserving display values.
+  return normalizeTag(tag).replace(/ñ/g, "n");
+}
+
 function normalizeTagForDisplay(tag: string) {
   return tag
     .toLowerCase()
@@ -39,7 +44,7 @@ export function normalizeTags(tags?: string[] | null) {
   const uniqueTags = new Map<string, string>();
 
   tags.forEach((tag) => {
-    const normalizedTagKey = normalizeTag(tag);
+    const normalizedTagKey = normalizeTagEquivalenceKey(tag);
     if (!normalizedTagKey) return;
 
     const candidate = normalizeTagForDisplay(tag);

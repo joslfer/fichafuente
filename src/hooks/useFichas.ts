@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { ARCHIVED_TAG, normalizeTag, normalizeTags } from "@/lib/utils";
+import { ARCHIVED_TAG, normalizeTagEquivalenceKey, normalizeTags } from "@/lib/utils";
 
 export type Ficha = Tables<"fichas">;
 export type FichaInsert = TablesInsert<"fichas">;
@@ -61,7 +61,7 @@ const buildPreferredTagByKey = (fichas: Ficha[]) => {
 
   fichas.forEach((ficha) => {
     (ficha.tags ?? []).forEach((tag) => {
-      const key = normalizeTag(tag);
+      const key = normalizeTagEquivalenceKey(tag);
       if (!key) return;
 
       const existing = preferredTagByKey.get(key);
@@ -82,7 +82,7 @@ const buildPreferredTagByKey = (fichas: Ficha[]) => {
 const canonicalizeFichaTags = (ficha: Ficha, preferredTagByKey: Map<string, string>): Ficha => {
   const seen = new Set<string>();
   const canonicalTags = (ficha.tags ?? []).reduce<string[]>((acc, tag) => {
-    const key = normalizeTag(tag);
+    const key = normalizeTagEquivalenceKey(tag);
     if (!key || seen.has(key)) return acc;
 
     seen.add(key);
@@ -140,8 +140,8 @@ export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
       }
 
       return canonicalFichas.filter((ficha) => {
-        const fichaTagKeys = new Set((ficha.tags ?? []).map((tag) => normalizeTag(tag)));
-        return normalizedTagFilters.every((tag) => fichaTagKeys.has(normalizeTag(tag)));
+        const fichaTagKeys = new Set((ficha.tags ?? []).map((tag) => normalizeTagEquivalenceKey(tag)));
+        return normalizedTagFilters.every((tag) => fichaTagKeys.has(normalizeTagEquivalenceKey(tag)));
       });
     },
     enabled: !!user,
@@ -166,7 +166,6 @@ export const useCreateFicha = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fichas"] });
-      toast.success("Ficha creada");
     },
     onError: (error) => {
       toast.error(`Error al crear: ${getErrorMessage(error, "desconocido")}`);

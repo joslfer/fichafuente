@@ -28,7 +28,7 @@ type EdgeState = {
   width: number;
 };
 
-const CANVAS_HEIGHT = 120;
+const CANVAS_HEIGHT = 160;
 const IDEAL_EDGE_DISTANCE = 70;
 const REPULSION_STRENGTH = 1800;
 const SPRING_STRENGTH = 0.0055;
@@ -461,7 +461,7 @@ const AmbientKnowledgeGraph = ({
 
   return (
     <div ref={containerRef} className={className} aria-hidden="true">
-      <canvas ref={canvasRef} className="block h-[120px] w-full touch-none" />
+      <canvas ref={canvasRef} className="block h-[160px] w-full touch-none" />
     </div>
   );
 };

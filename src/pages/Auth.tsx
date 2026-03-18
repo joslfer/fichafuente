@@ -1,12 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+
+const PRIVACY_ACCEPTED_KEY = "fichafuente_privacy_policy_accepted";
 
 const Auth = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [requiresPrivacyAcceptance, setRequiresPrivacyAcceptance] = useState(true);
+  const [hasAcceptedPrivacy, setHasAcceptedPrivacy] = useState(false);
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
+    const alreadyAccepted = localStorage.getItem(PRIVACY_ACCEPTED_KEY) === "true";
+    setRequiresPrivacyAcceptance(!alreadyAccepted);
+    setHasAcceptedPrivacy(alreadyAccepted);
+  }, []);
 
   const handleGoogleLogin = async () => {
+    if (requiresPrivacyAcceptance && !hasAcceptedPrivacy) {
+      return;
+    }
+
+    if (requiresPrivacyAcceptance) {
+      localStorage.setItem(PRIVACY_ACCEPTED_KEY, "true");
+    }
+
     setIsRedirecting(true);
 
     const { error } = await supabase.auth.signInWithOAuth({
@@ -43,7 +76,7 @@ const Auth = () => {
         <Button
           onClick={handleGoogleLogin}
           variant="outline"
-          disabled={isRedirecting}
+          disabled={isRedirecting || (requiresPrivacyAcceptance && !hasAcceptedPrivacy)}
           className="w-full h-12 text-sm font-medium gap-3 border-border hover:bg-secondary transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -54,6 +87,20 @@ const Auth = () => {
           </svg>
           {isRedirecting ? "Abriendo Google..." : "Continuar con Google"}
         </Button>
+
+        {requiresPrivacyAcceptance && (
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="privacy-consent"
+              checked={hasAcceptedPrivacy}
+              onCheckedChange={(checked) => setHasAcceptedPrivacy(checked === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="privacy-consent" className="text-xs leading-relaxed text-muted-foreground">
+              Acepto la politica de privacidad.
+            </Label>
+          </div>
+        )}
 
         <p className="text-xs text-center text-muted-foreground/70">
           Solo se accede con cuenta de Google

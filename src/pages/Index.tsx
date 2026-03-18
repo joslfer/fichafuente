@@ -8,7 +8,7 @@ import FichaCard from "@/components/FichaCard";
 import FichaForm from "@/components/FichaForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import AmbientKnowledgeGraph from "@/components/AmbientKnowledgeGraph";
-import { ARCHIVED_TAG, isArchivedTag, normalizeTag } from "@/lib/utils";
+import { ARCHIVED_TAG, isArchivedTag, normalizeTag, normalizeTagEquivalenceKey } from "@/lib/utils";
 
 const Index = () => {
   const showMonthlyNewCards = false;
@@ -23,6 +23,8 @@ const Index = () => {
   const [graphPerturbSignal, setGraphPerturbSignal] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editingFicha, setEditingFicha] = useState<Ficha | null>(null);
+  const [recentlyCreatedFichaId, setRecentlyCreatedFichaId] = useState<string | null>(null);
+  const graphSectionRef = useRef<HTMLDivElement>(null);
 
   const { data: fichas, isLoading } = useFichas(searchQuery, tagFilters);
   // Stats are always computed from all fichas (no tag filter) so they don't change when filtering.
@@ -177,7 +179,7 @@ const Index = () => {
     };
   }, [allActiveFichas]);
 
-  const isWeeklyStreakZero = weeklyStreakStats.current === 0;
+  const isWeeklyStreakZero = !isLoading && weeklyStreakStats.current === 0;
 
   useEffect(() => {
     if (isLoading) return;
@@ -253,19 +255,23 @@ const Index = () => {
     }
   };
 
+  const handleScrollToGraph = () => {
+    graphSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const addTagFilter = (tag: string) => {
-    const normalizedTagKey = normalizeTag(tag);
+    const normalizedTagKey = normalizeTagEquivalenceKey(tag);
     if (!normalizedTagKey) return;
 
     setTagFilters((prev) => {
-      if (prev.some((prevTag) => normalizeTag(prevTag) === normalizedTagKey)) return prev;
+      if (prev.some((prevTag) => normalizeTagEquivalenceKey(prevTag) === normalizedTagKey)) return prev;
       return [...prev, tag];
     });
   };
 
   const removeTagFilter = (tag: string) => {
-    const normalizedTagKey = normalizeTag(tag);
-    setTagFilters((prev) => prev.filter((t) => normalizeTag(t) !== normalizedTagKey));
+    const normalizedTagKey = normalizeTagEquivalenceKey(tag);
+    setTagFilters((prev) => prev.filter((t) => normalizeTagEquivalenceKey(t) !== normalizedTagKey));
   };
 
   const triggerSearchIconAnimation = () => {
@@ -304,6 +310,16 @@ const Index = () => {
     return () => window.removeEventListener("keydown", handleShortcuts);
   }, [formOpen]);
 
+  useEffect(() => {
+    if (!recentlyCreatedFichaId) return;
+
+    const timer = window.setTimeout(() => {
+      setRecentlyCreatedFichaId(null);
+    }, 800);
+
+    return () => window.clearTimeout(timer);
+  }, [recentlyCreatedFichaId]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -321,14 +337,20 @@ const Index = () => {
                   {monthlyCardsStats.delta > 0 && <ArrowUp className="w-3.5 h-3.5 text-success" />}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 ml-3 sm:ml-4 text-xs sm:text-sm font-normal text-muted-foreground/90 tabular-nums whitespace-nowrap">
+                <button
+                  type="button"
+                  onClick={handleScrollToGraph}
+                  className="inline-flex items-center gap-1.5 ml-3 sm:ml-4 text-xs sm:text-sm font-normal text-muted-foreground/90 tabular-nums whitespace-nowrap transition-colors hover:text-foreground/90"
+                  title="Ir al grafo"
+                  aria-label="Ir al grafo"
+                >
                   <Flame
                     className={`w-3.5 h-3.5 ${weeklyStreakStats.hasCurrentWeek ? "text-orange-500" : "text-muted-foreground/60"}`}
                     fill={weeklyStreakStats.hasCurrentWeek ? "#fdba74" : "none"}
                   />
                   <span className="sm:hidden inline-flex h-8 flex-col justify-center leading-[1.05]">
                     <span className="text-[11px]">
-                      {isWeeklyStreakZero ? "Continúa esta semana!" : `racha semanal: ${animatedWeeklyStreak}`}
+                      {isLoading ? "Racha semanal..." : isWeeklyStreakZero ? "Continúa..." : `racha semanal: ${animatedWeeklyStreak}`}
                     </span>
                     <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/85">
                       ({weeklyCreationStats.currentWeek} nuevas)
@@ -336,13 +358,13 @@ const Index = () => {
                     </span>
                   </span>
                   <span className="hidden sm:inline">
-                    {isWeeklyStreakZero ? "Continúa esta semana!" : `racha semanal: ${animatedWeeklyStreak}`}
+                    {isLoading ? "Racha semanal..." : isWeeklyStreakZero ? "Continúa..." : `racha semanal: ${animatedWeeklyStreak}`}
                   </span>
                   <span className="hidden sm:inline-flex items-center gap-1 ml-3 text-muted-foreground/85">
                     ({weeklyCreationStats.currentWeek} nuevas)
                     {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3.5 h-3.5" />}
                   </span>
-                </span>
+                </button>
               )}
             </div>
 
@@ -474,10 +496,16 @@ const Index = () => {
           </div>
         ) : visibleFichas.length > 0 ? (
           <div
-            className={`grid grid-cols-1 sm:grid-cols-2 ${visibleFichas.length < 3 ? "lg:grid-cols-2" : "lg:grid-cols-3"} gap-5`}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
           >
             {visibleFichas.map((ficha) => (
-              <FichaCard key={ficha.id} ficha={ficha} onEdit={handleEdit} searchQuery={searchQuery} />
+              <FichaCard
+                key={ficha.id}
+                ficha={ficha}
+                onEdit={handleEdit}
+                searchQuery={searchQuery}
+                isRecentlyCreated={ficha.id === recentlyCreatedFichaId}
+              />
             ))}
           </div>
         ) : (
@@ -501,10 +529,10 @@ const Index = () => {
 
       </div>
 
-      <footer className="mt-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <footer className="mt-8">
+        <div ref={graphSectionRef} className="max-w-6xl mx-auto scroll-mt-20 px-4 sm:px-6 py-6 sm:py-8">
           {!isLoading && !viewingArchived && activeFichas.length > 0 && (
-            <div className="relative w-full mt-2">
+            <div className="relative w-full mt-2 mb-6 sm:mb-10">
               <AmbientKnowledgeGraph
                 items={graphItems}
                 className="w-full"
@@ -527,7 +555,12 @@ const Index = () => {
         </div>
       </footer>
 
-      <FichaForm open={formOpen} onOpenChange={handleFormOpenChange} editingFicha={editingFicha} />
+      <FichaForm
+        open={formOpen}
+        onOpenChange={handleFormOpenChange}
+        editingFicha={editingFicha}
+        onCreated={setRecentlyCreatedFichaId}
+      />
     </div>
   );
 };

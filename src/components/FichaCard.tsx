@@ -20,6 +20,7 @@ type FichaCardProps = {
   ficha: Ficha;
   onEdit: (ficha: Ficha) => void;
   searchQuery?: string;
+  isRecentlyCreated?: boolean;
 };
 
 type LaserPath = {
@@ -101,7 +102,7 @@ const buildRandomLaserPath = (rect: DOMRect): LaserPath => {
   };
 };
 
-const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
+const FichaCard = ({ ficha, onEdit, searchQuery, isRecentlyCreated = false }: FichaCardProps) => {
   const deleteFicha = useDeleteFicha();
   const cardRef = useRef<HTMLElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
@@ -184,6 +185,17 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
   useEffect(() => {
     setShowAllTags(false);
   }, [ficha.id]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const shouldVibrateScreen = deletePhase === "precharge" || deletePhase === "charging";
+    document.body.classList.toggle("ficha-screen-vibrate", shouldVibrateScreen);
+
+    return () => {
+      document.body.classList.remove("ficha-screen-vibrate");
+    };
+  }, [deletePhase]);
 
   useEffect(() => {
     if (!hasContent || !previewViewportRef.current || !previewContentRef.current) {
@@ -277,7 +289,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery }: FichaCardProps) => {
       <article
       ref={cardRef}
       data-ficha-card-id={ficha.id}
-      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
+      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${isRecentlyCreated ? "ficha-created-glow" : ""} ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
     >
       {deletePhase === "charging" && (
         <div className="pointer-events-none absolute inset-0 z-20">

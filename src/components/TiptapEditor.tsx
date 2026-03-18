@@ -5,12 +5,13 @@ import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Code2, Highlighter } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 type TiptapEditorProps = {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  className?: string;
 };
 
 export type TiptapEditorHandle = {
@@ -80,24 +81,9 @@ const applySlashCommandAtCursor = (editor: Editor, requireTrailingSpace: boolean
   return runSlashCommand(editor, command) ? command : null;
 };
 
-const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ content, onChange }, ref) => {
-  const toolbarRef = useRef<HTMLDivElement>(null);
+const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ content, onChange, className }, ref) => {
   const slashCommandActiveRef = useRef(false);
   const lastEnterAtRef = useRef(0);
-  const [toolbarState, setToolbarState] = useState({
-    visible: false,
-    x: 0,
-    y: 0,
-    placement: "above" as "above" | "below",
-  });
-
-  const disableFloatingToolbar = useMemo(() => {
-    if (typeof navigator === "undefined") return false;
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua);
-    const isIPadOSDesktopUA = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-    return isIOS || isIPadOSDesktopUA;
-  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -200,7 +186,7 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
         return false;
       },
       attributes: {
-        class: "ficha-editor-content min-h-[200px] w-full px-3 py-2 text-sm focus:outline-none",
+        class: "ficha-editor-content min-h-[200px] sm:h-full sm:min-h-[132px] w-full px-3 py-2 text-sm focus:outline-none",
         "data-field": "editor",
       },
     },
@@ -215,102 +201,6 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
   useImperativeHandle(ref, () => ({
     focus: () => { editor?.chain().focus("end").run(); },
   }), [editor]);
-
-  const updateFloatingToolbar = useCallback(() => {
-    if (disableFloatingToolbar) {
-      setToolbarState((prev) => ({ ...prev, visible: false }));
-      return;
-    }
-
-    if (!editor || !editor.isEditable) {
-      setToolbarState((prev) => ({ ...prev, visible: false }));
-      return;
-    }
-
-    const { selection } = editor.state;
-
-    if (selection.empty) {
-      setToolbarState((prev) => ({ ...prev, visible: false }));
-      return;
-    }
-
-    if (!editor.view.hasFocus()) {
-      setToolbarState((prev) => ({ ...prev, visible: false }));
-      return;
-    }
-
-    // Use the native Selection API for pixel-accurate rects that account for
-    // scrolled containers, zoom, and multi-line selections.
-    const nativeSel = window.getSelection();
-    if (!nativeSel || nativeSel.rangeCount === 0) {
-      setToolbarState((prev) => ({ ...prev, visible: false }));
-      return;
-    }
-    const rect = nativeSel.getRangeAt(0).getBoundingClientRect();
-    if (!rect || rect.width === 0 && rect.height === 0) {
-      setToolbarState((prev) => ({ ...prev, visible: false }));
-      return;
-    }
-
-    const toolbarWidth = toolbarRef.current?.offsetWidth ?? 290;
-    const toolbarHeight = toolbarRef.current?.offsetHeight ?? 46;
-    const gap = 8;
-    const pad = 8;
-
-    // Center above the selection, then clamp to viewport.
-    const rawLeft = rect.left + rect.width / 2 - toolbarWidth / 2;
-    const left = Math.max(pad, Math.min(rawLeft, window.innerWidth - toolbarWidth - pad));
-
-    // Flip below if not enough room above.
-    const wouldOverflowTop = rect.top - toolbarHeight - gap < pad;
-    const placement: "above" | "below" = wouldOverflowTop ? "below" : "above";
-    const top = placement === "above" ? rect.top - toolbarHeight - gap : rect.bottom + gap;
-
-    setToolbarState({
-      visible: true,
-      x: left + toolbarWidth / 2, // keep x as the centre so the CSS transform still works
-      y: top,
-      placement,
-    });
-  }, [editor, disableFloatingToolbar]);
-
-  useEffect(() => {
-    if (!editor) return;
-
-    const handleSelectionUpdate = () => updateFloatingToolbar();
-    const handleTransaction = () => updateFloatingToolbar();
-    const handleBlur = () => {
-      window.setTimeout(() => updateFloatingToolbar(), 0);
-    };
-
-    editor.on("selectionUpdate", handleSelectionUpdate);
-    editor.on("transaction", handleTransaction);
-    editor.on("blur", handleBlur);
-    editor.on("focus", handleSelectionUpdate);
-
-    const handleWindowChange = () => updateFloatingToolbar();
-    const handleDocumentPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (toolbarRef.current?.contains(target)) return;
-      if (editor.view.dom.contains(target)) return;
-      setToolbarState((prev) => ({ ...prev, visible: false }));
-    };
-
-    window.addEventListener("resize", handleWindowChange);
-    window.addEventListener("scroll", handleWindowChange, true);
-    document.addEventListener("pointerdown", handleDocumentPointerDown);
-
-    return () => {
-      editor.off("selectionUpdate", handleSelectionUpdate);
-      editor.off("transaction", handleTransaction);
-      editor.off("blur", handleBlur);
-      editor.off("focus", handleSelectionUpdate);
-      window.removeEventListener("resize", handleWindowChange);
-      window.removeEventListener("scroll", handleWindowChange, true);
-      document.removeEventListener("pointerdown", handleDocumentPointerDown);
-    };
-  }, [editor, updateFloatingToolbar]);
 
   if (!editor) return null;
 
@@ -334,7 +224,7 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
       }}
       onClick={onClick}
       className={cn(
-        "h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
+        "h-7 w-7 flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
         active && "bg-accent text-foreground"
       )}
     >
@@ -343,18 +233,9 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
   );
 
   return (
-    <div className="rounded-2xl border border-input bg-card overflow-visible">
-      {!disableFloatingToolbar && (
-        <div
-          ref={toolbarRef}
-          style={{ left: `${toolbarState.x}px`, top: `${toolbarState.y}px` }}
-          className={cn(
-            "fixed z-[70] -translate-x-1/2 rounded-xl border border-border/70 bg-background/95 p-1.5 shadow-lg backdrop-blur-sm transition-all duration-150 ease-out",
-            toolbarState.placement === "above" ? "-translate-y-full" : "translate-y-0",
-            toolbarState.visible ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
-          )}
-        >
-          <div className="inline-flex items-center gap-0.5">
+    <div className={cn("rounded-sm border border-input bg-background overflow-hidden", className)}>
+      <div className="sticky top-0 z-20 border-b border-border/70 bg-background/95 p-1 backdrop-blur-sm">
+        <div className="inline-flex items-center gap-0.5">
           <ToolBtn title="Negrita" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
             <Bold className="w-3.5 h-3.5" />
           </ToolBtn>
@@ -383,9 +264,8 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(({ conten
           <ToolBtn title="Lista numerada" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
             <ListOrdered className="w-3.5 h-3.5" />
           </ToolBtn>
-          </div>
         </div>
-      )}
+      </div>
       <EditorContent editor={editor} />
     </div>
   );
