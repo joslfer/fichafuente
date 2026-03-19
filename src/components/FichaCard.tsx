@@ -289,7 +289,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isRecentlyCreated = false }: Fi
       <article
       ref={cardRef}
       data-ficha-card-id={ficha.id}
-      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${isRecentlyCreated ? "ficha-created-glow" : ""} ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
+      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate ficha-laser-mode" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
     >
       {deletePhase === "charging" && (
         <div className="pointer-events-none absolute inset-0 z-20">

@@ -145,7 +145,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
   useEffect(() => {
     if (!open || typeof window === "undefined") return;
 
-    const isMobile = window.matchMedia("(max-width: 639px)").matches;
+    const isMobile = window.matchMedia("(max-width: 640px)").matches;
     if (!isMobile) return;
 
     const scrollY = window.scrollY;

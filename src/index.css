@@ -359,37 +359,7 @@
   }
 }
 
-@keyframes ficha-created-glow-snap {
-  0% {
-    border-color: hsl(var(--logo-gradient-from) / 0.18);
-    box-shadow:
-      0 0 0 0 hsl(var(--logo-gradient-from) / 0),
-      0 0 0 hsl(var(--logo-gradient-from) / 0);
-    transform: translateY(1px) scale(0.992);
-  }
-  38% {
-    border-color: hsl(var(--logo-gradient-from) / 0.92);
-    box-shadow:
-      0 0 0 2px hsl(var(--logo-gradient-from) / 0.46),
-      0 0 24px hsl(var(--logo-gradient-from) / 0.58);
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    border-color: hsl(var(--logo-gradient-from) / 0.72);
-    box-shadow:
-      0 0 0 1px hsl(var(--logo-gradient-from) / 0.32),
-      0 0 12px hsl(var(--logo-gradient-from) / 0.34);
-    transform: translateY(0) scale(1);
-  }
-}
 
-.ficha-created-glow {
-  border-color: hsl(var(--logo-gradient-from) / 0.72) !important;
-  box-shadow:
-    0 0 0 1px hsl(var(--logo-gradient-from) / 0.32),
-    0 0 12px hsl(var(--logo-gradient-from) / 0.34);
-  animation: ficha-created-glow-snap 360ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
-}
 
 body.ficha-screen-vibrate #root {
   animation: ficha-screen-vibrate 0.09s linear infinite;
@@ -615,6 +585,57 @@ body.ficha-screen-vibrate #root {
   animation:
     ficha-overheat-border 1s ease-in-out forwards,
     ficha-laser-vibrate 0.08s linear infinite;
+}
+
+/* Laser mode: turn text and blue elements red */
+.ficha-laser-mode {
+  color: hsl(var(--destructive));
+}
+
+/* Red out the title */
+.ficha-laser-mode h3 {
+  color: hsl(var(--destructive)) !important;
+}
+
+/* Red out all links and their underlines */
+.ficha-laser-mode a {
+  color: hsl(var(--destructive)) !important;
+  text-decoration-color: hsl(var(--destructive)) !important;
+}
+
+.ficha-laser-mode a:hover {
+  color: hsl(var(--destructive) / 0.8) !important;
+}
+
+/* Red out the text content preview */
+.ficha-laser-mode .ficha-preview-content {
+  color: hsl(var(--destructive) / 0.85) !important;
+}
+
+.ficha-laser-mode .ficha-preview-content a {
+  color: hsl(var(--destructive)) !important;
+}
+
+/* Red out the tags (both archived and normal) */
+.ficha-laser-mode .tag-hop {
+  background-color: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-foreground)) !important;
+  border-color: hsl(var(--destructive)) !important;
+}
+
+/* Red out the source name text */
+.ficha-laser-mode .text-foreground\/90 {
+  color: hsl(var(--destructive)) !important;
+}
+
+/* Make sure all secondary colored text becomes red */
+.ficha-laser-mode .text-muted-foreground {
+  color: hsl(var(--destructive) / 0.75) !important;
+}
+
+/* Footer text to red */
+.ficha-laser-mode .text-\[11px\] {
+  color: hsl(var(--destructive) / 0.7) !important;
 }
 
 @keyframes ficha-destruction-flare {
