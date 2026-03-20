@@ -148,7 +148,9 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     const isMobile = window.matchMedia("(max-width: 640px)").matches;
     if (!isMobile) return;
 
-    const scrollY = window.scrollY;
+    // Keep the background anchored at the top while the fullscreen dialog is open.
+    window.scrollTo(0, 0);
+
     const { body, documentElement } = document;
 
     const prevBodyOverflow = body.style.overflow;
@@ -157,25 +159,33 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     const prevBodyLeft = body.style.left;
     const prevBodyRight = body.style.right;
     const prevBodyWidth = body.style.width;
+    const prevBodyTouchAction = body.style.touchAction;
+    const prevBodyOverscrollBehavior = body.style.overscrollBehavior;
     const prevHtmlOverflow = documentElement.style.overflow;
+    const prevHtmlOverscrollBehavior = documentElement.style.overscrollBehavior;
 
     documentElement.style.overflow = "hidden";
+    documentElement.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
     body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
+    body.style.top = "0";
     body.style.left = "0";
     body.style.right = "0";
     body.style.width = "100%";
+    body.style.touchAction = "none";
+    body.style.overscrollBehavior = "none";
 
     return () => {
       documentElement.style.overflow = prevHtmlOverflow;
+      documentElement.style.overscrollBehavior = prevHtmlOverscrollBehavior;
       body.style.overflow = prevBodyOverflow;
       body.style.position = prevBodyPosition;
       body.style.top = prevBodyTop;
       body.style.left = prevBodyLeft;
       body.style.right = prevBodyRight;
       body.style.width = prevBodyWidth;
-      window.scrollTo(0, scrollY);
+      body.style.touchAction = prevBodyTouchAction;
+      body.style.overscrollBehavior = prevBodyOverscrollBehavior;
     };
   }, [open]);
 
@@ -534,7 +544,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
               onChange={(e) => setSourceName(e.target.value)}
               placeholder="Nombre de la fuente"
               rows={2}
-              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-6 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
+              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-7 text-base leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
             />
             </div>
           </div>
@@ -597,7 +607,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
               onChange={(e) => setSourceUrl(e.target.value)}
               placeholder="https://..."
               rows={2}
-              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-6 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
+              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-7 text-base leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
             />
             </div>
           </div>

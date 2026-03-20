@@ -289,7 +289,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isRecentlyCreated = false }: Fi
       <article
       ref={cardRef}
       data-ficha-card-id={ficha.id}
-      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate ficha-laser-mode" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
+      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate ficha-laser-mode" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy ficha-laser-mode" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
     >
       {deletePhase === "charging" && (
         <div className="pointer-events-none absolute inset-0 z-20">
@@ -333,7 +333,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isRecentlyCreated = false }: Fi
       {/* Header */}
       <div className="mb-2 pr-8">
         <h3
-          className={`text-[15px] font-semibold leading-snug transition-colors ${
+          className={`text-[15px] font-semibold leading-snug break-words [overflow-wrap:anywhere] transition-colors ${
             canOpenPublicPreview ? "text-foreground cursor-pointer sm:hover:text-primary" : "text-foreground"
           }`}
           onClick={canOpenPublicPreview ? handleClick : undefined}
@@ -408,7 +408,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isRecentlyCreated = false }: Fi
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-100 sm:hover:-translate-y-px ${
+              className={`tag-hop inline-flex max-w-full items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full break-all transition-all duration-100 sm:hover:-translate-y-px ${
                 isArchivedTag(tag)
                   ? "ml-auto bg-secondary text-foreground/80 border border-border sm:hover:bg-secondary/90"
                   : "bg-badge text-badge-foreground sm:hover:bg-badge/80"

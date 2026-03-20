@@ -141,7 +141,7 @@ useEffect(() => {
         </div>
 
         <article className="animate-fade-in space-y-6">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{ficha.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground break-words [overflow-wrap:anywhere]">{ficha.title}</h1>
 
           <div className="flex flex-col gap-1 pt-1 min-w-0">
             {ficha.source_url ? (
@@ -154,7 +154,7 @@ useEffect(() => {
               </div>
             ) : (
               <div className="inline-flex items-center gap-2 min-w-0">
-                <span className="text-sm font-medium text-foreground truncate">{ficha.source_name}</span>
+                <span className="text-sm font-medium text-foreground break-all">{ficha.source_name}</span>
                 {isDoiSource && <DoiBadge />}
               </div>
             )}

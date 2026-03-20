@@ -627,9 +627,15 @@ body.ficha-screen-vibrate #root {
 
 /* Red out the tags (both archived and normal) */
 .ficha-laser-mode .tag-hop {
-  background-color: hsl(var(--destructive)) !important;
+  background-color: hsl(var(--destructive) / 0.72) !important;
+  color: hsl(var(--destructive-foreground) / 0.96) !important;
+  border-color: hsl(var(--destructive) / 0.58) !important;
+}
+
+/* Keep search/highlight chips in the same red family while laser is active. */
+.ficha-laser-mode :is(mark, .search-highlight) {
+  background-color: hsl(var(--destructive) / 0.3) !important;
   color: hsl(var(--destructive-foreground)) !important;
-  border-color: hsl(var(--destructive)) !important;
 }
 
 /* Red out the source name text */
@@ -829,6 +835,14 @@ body.ficha-screen-vibrate #root {
 .ficha-content ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 1em; }
 .ficha-content li { margin-bottom: 0.25em; }
 .ficha-content blockquote { border-left: 4px solid hsl(var(--primary) / 0.4); padding-left: 1rem; font-style: italic; color: hsl(var(--muted-foreground)); margin: 1em 0; }
+
+.ficha-content,
+.ficha-preview-content,
+.public-ficha-content,
+.ficha-editor-content {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .ficha-content mark,
 .ficha-preview-content mark,
 .public-ficha-content mark,
