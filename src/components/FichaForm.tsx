@@ -159,33 +159,24 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     const prevBodyLeft = body.style.left;
     const prevBodyRight = body.style.right;
     const prevBodyWidth = body.style.width;
-    const prevBodyTouchAction = body.style.touchAction;
-    const prevBodyOverscrollBehavior = body.style.overscrollBehavior;
     const prevHtmlOverflow = documentElement.style.overflow;
-    const prevHtmlOverscrollBehavior = documentElement.style.overscrollBehavior;
 
     documentElement.style.overflow = "hidden";
-    documentElement.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
     body.style.position = "fixed";
     body.style.top = "0";
     body.style.left = "0";
     body.style.right = "0";
     body.style.width = "100%";
-    body.style.touchAction = "none";
-    body.style.overscrollBehavior = "none";
 
     return () => {
       documentElement.style.overflow = prevHtmlOverflow;
-      documentElement.style.overscrollBehavior = prevHtmlOverscrollBehavior;
       body.style.overflow = prevBodyOverflow;
       body.style.position = prevBodyPosition;
       body.style.top = prevBodyTop;
       body.style.left = prevBodyLeft;
       body.style.right = prevBodyRight;
       body.style.width = prevBodyWidth;
-      body.style.touchAction = prevBodyTouchAction;
-      body.style.overscrollBehavior = prevBodyOverscrollBehavior;
     };
   }, [open]);
 
@@ -345,14 +336,23 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
   };
 
   const parseHtml = (rawHtml: string) => {
-    // The first block-level element's text is the title, the rest is content
+    // Use the first non-empty block as title to avoid silent failures with leading empty paragraphs.
     const div = document.createElement("div");
     div.innerHTML = rawHtml;
     const children = Array.from(div.children);
-    const firstBlock = children[0];
-    const title = firstBlock?.textContent?.trim() || "";
-    // Content is everything after the first block
-    const remainingBlocks = children.slice(1);
+
+    const titleBlockIndex = children.findIndex((child) => {
+      const text = child.textContent?.trim() || "";
+      if (text.length > 0) return true;
+      return Boolean(child.querySelector("img, video, iframe, table, hr, pre"));
+    });
+
+    const fallbackTitle = (div.textContent || "").replace(/\u00a0/g, " ").trim();
+    const title = titleBlockIndex >= 0
+      ? (children[titleBlockIndex].textContent?.trim() || "")
+      : fallbackTitle;
+
+    const remainingBlocks = children.filter((_, index) => index !== titleBlockIndex);
     const contentDiv = document.createElement("div");
     remainingBlocks.forEach(b => contentDiv.appendChild(b.cloneNode(true)));
     const content = contentDiv.innerHTML || "";

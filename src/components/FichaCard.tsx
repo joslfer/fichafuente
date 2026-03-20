@@ -32,6 +32,9 @@ type LaserPath = {
   impactY: number;
 };
 
+const LASER_PRECHARGE_MS = 110;
+const LASER_CHARGING_MS = 1000;
+
 const highlightText = (text: string, query: string) => {
   if (!query || !text) return text;
   const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
@@ -140,20 +143,17 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isRecentlyCreated = false }: Fi
 
     prechargeTimerRef.current = window.setTimeout(() => {
       setDeletePhase("charging");
-    }, 110);
+    }, LASER_PRECHARGE_MS);
 
     laserTimerRef.current = window.setTimeout(() => {
       setDeletePhase("destroying");
-    }, 1110);
-
-    deleteTimerRef.current = window.setTimeout(() => {
       deleteFicha.mutate(ficha.id, {
         onError: () => {
           setDeletePhase("idle");
           setLaserPath(null);
         },
       });
-    }, 1680);
+    }, LASER_PRECHARGE_MS + LASER_CHARGING_MS);
   };
 
   const hasContent = hasMeaningfulContent(ficha.content);
@@ -289,7 +289,7 @@ const FichaCard = ({ ficha, onEdit, searchQuery, isRecentlyCreated = false }: Fi
       <article
       ref={cardRef}
       data-ficha-card-id={ficha.id}
-      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate ficha-laser-mode" : ""} ${deletePhase === "destroying" ? "ficha-laser-destroy ficha-laser-mode" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
+      className={`group relative overflow-hidden bg-card rounded-lg border border-border/60 p-5 shadow-sm sm:hover:shadow-md sm:hover:border-border transition-all duration-100 flex flex-col min-h-[280px] ${deletePhase === "charging" ? "ficha-overheat-border ficha-laser-vibrate ficha-laser-mode" : ""} ${deletePhase === "destroying" ? "opacity-0 ficha-laser-mode" : ""} ${deletePhase !== "idle" ? "pointer-events-none" : ""}`}
     >
       {deletePhase === "charging" && (
         <div className="pointer-events-none absolute inset-0 z-20">

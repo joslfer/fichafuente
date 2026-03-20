@@ -627,9 +627,9 @@ body.ficha-screen-vibrate #root {
 
 /* Red out the tags (both archived and normal) */
 .ficha-laser-mode .tag-hop {
-  background-color: hsl(var(--destructive) / 0.72) !important;
-  color: hsl(var(--destructive-foreground) / 0.96) !important;
-  border-color: hsl(var(--destructive) / 0.58) !important;
+  background-color: hsl(var(--destructive) / 0.22) !important;
+  color: hsl(var(--destructive) / 0.9) !important;
+  border-color: hsl(var(--destructive) / 0.34) !important;
 }
 
 /* Keep search/highlight chips in the same red family while laser is active. */

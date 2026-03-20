@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -97,8 +98,35 @@ const canonicalizeFichaTags = (ficha: Ficha, preferredTagByKey: Map<string, stri
 };
 
 export const useFichas = (searchQuery?: string, tagFilters: string[] = []) => {
+  const qc = useQueryClient();
   const { user } = useAuth();
   const normalizedTagFilters = normalizeTags(tagFilters);
+  const isPrimaryLiveQuery = !searchQuery && normalizedTagFilters.length === 0;
+
+  useEffect(() => {
+    if (!user?.id || !isPrimaryLiveQuery) return;
+
+    const channel = supabase
+      .channel(`fichas-live-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "fichas",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["fichas", user.id] });
+          qc.invalidateQueries({ queryKey: ["ficha-stats", user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isPrimaryLiveQuery, qc, user?.id]);
 
   return useQuery({
     queryKey: ["fichas", user?.id, searchQuery, normalizedTagFilters],
