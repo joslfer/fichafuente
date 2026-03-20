@@ -467,7 +467,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="inset-0 left-0 top-0 h-[100dvh] max-h-[100dvh] max-w-none translate-x-0 translate-y-0 overflow-y-auto overscroll-contain rounded-none border-0 p-3 data-[state=open]:animate-none data-[state=closed]:animate-none sm:left-[50%] sm:top-[50%] sm:h-[min(42rem,calc(100dvh-2rem))] sm:max-h-[min(42rem,calc(100dvh-2rem))] sm:max-w-[40rem] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-hidden sm:rounded-lg sm:border sm:border-border/70 sm:p-5 sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out"
+        className="inset-0 left-0 top-0 h-[100dvh] max-h-[100dvh] max-w-none translate-x-0 translate-y-0 overflow-y-auto overscroll-contain rounded-none border-0 p-3 data-[state=open]:animate-none data-[state=closed]:animate-none sm:left-[50%] sm:top-[50%] sm:h-[min(42rem,calc(100dvh-2rem))] sm:max-h-[min(42rem,calc(100dvh-2rem))] sm:max-w-[40rem] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-hidden sm:rounded-lg sm:border sm:border-border/70 sm:p-5"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => { if (hasContent) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (hasContent) e.preventDefault(); }}
@@ -476,7 +476,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
           className="absolute right-4 top-4 z-30 hidden rounded-sm text-destructive/85 opacity-90 ring-offset-background transition-colors hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive/40 focus:ring-offset-2 disabled:pointer-events-none sm:inline-flex"
           onClick={handleCloseWithReset}
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4 sm:h-5 sm:w-5" />
           <span className="sr-only">Cerrar</span>
         </DialogClose>
 
@@ -534,9 +534,11 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
               </Button>
             </div>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
-                Fuente
-              </span>
+              {sourceName.length === 0 && (
+                <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
+                  Fuente
+                </span>
+              )}
             <textarea
               id="sourceName"
               ref={sourceNameRef}
@@ -584,9 +586,11 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
               </Button>
             </div>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
-                Link de la fuente
-              </span>
+              {sourceUrl.length === 0 && (
+                <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
+                  Link de la fuente
+                </span>
+              )}
               <Button
                 type="button"
                 variant="ghost"
