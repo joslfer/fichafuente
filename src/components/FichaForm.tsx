@@ -65,8 +65,8 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
   const [linkPasteFeedback, setLinkPasteFeedback] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [draftBanner, setDraftBanner] = useState(false);
-  const draftTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const draftStatusTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const draftTimerRef = useRef<number | null>(null);
+  const draftStatusTimerRef = useRef<number | null>(null);
   const editorRef = useRef<TiptapEditorHandle>(null);
   const sourceNameRef = useRef<HTMLTextAreaElement>(null);
   const authorsRef = useRef<HTMLTextAreaElement>(null);
@@ -236,10 +236,14 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
   };
 
   const handleCloseWithReset = () => {
-    if (!editingFicha) {
-      discardDraft();
-    }
     onOpenChange(false);
+
+    if (!editingFicha) {
+      // Close first to avoid visible form reset during the exit transition.
+      window.setTimeout(() => {
+        discardDraft();
+      }, 220);
+    }
   };
 
   // Debounced auto-save draft (new fichas only).
@@ -453,7 +457,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="inset-0 left-0 top-0 h-[100dvh] max-h-[100dvh] max-w-none translate-x-0 translate-y-0 overflow-y-auto overscroll-contain rounded-none border-0 p-3 sm:left-[50%] sm:top-[50%] sm:h-[min(42rem,calc(100dvh-2rem))] sm:max-h-[min(42rem,calc(100dvh-2rem))] sm:max-w-[40rem] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-hidden sm:rounded-lg sm:border sm:border-border/70 sm:p-5"
+        className="inset-0 left-0 top-0 h-[100dvh] max-h-[100dvh] max-w-none translate-x-0 translate-y-0 overflow-y-auto overscroll-contain rounded-none border-0 p-3 data-[state=open]:animate-none data-[state=closed]:animate-none sm:left-[50%] sm:top-[50%] sm:h-[min(42rem,calc(100dvh-2rem))] sm:max-h-[min(42rem,calc(100dvh-2rem))] sm:max-w-[40rem] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-hidden sm:rounded-lg sm:border sm:border-border/70 sm:p-5 sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => { if (hasContent) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (hasContent) e.preventDefault(); }}

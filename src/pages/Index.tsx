@@ -17,8 +17,6 @@ const Index = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchIconAnimating, setIsSearchIconAnimating] = useState(false);
-  const [animatedMonthlyCount, setAnimatedMonthlyCount] = useState(0);
-  const [animatedWeeklyStreak, setAnimatedWeeklyStreak] = useState(0);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [graphPerturbSignal, setGraphPerturbSignal] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
@@ -169,69 +167,13 @@ const Index = () => {
       }
     });
 
-    const delta = currentWeek - previousWeek;
-    const trend = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-
     return {
       currentWeek,
       previousWeek,
-      trend,
     };
   }, [allActiveFichas]);
 
   const isWeeklyStreakZero = !isLoading && weeklyStreakStats.current === 0;
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    const target = monthlyCardsStats.currentMonth;
-    const from = animatedMonthlyCount;
-    const duration = 720;
-    const start = performance.now();
-    let frameId = 0;
-
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - start) / duration);
-      const eased = easeOutCubic(progress);
-      const next = Math.round(from + (target - from) * eased);
-      setAnimatedMonthlyCount(next);
-
-      if (progress < 1) {
-        frameId = window.requestAnimationFrame(tick);
-      }
-    };
-
-    frameId = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frameId);
-  }, [monthlyCardsStats.currentMonth, isLoading]);
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    const target = weeklyStreakStats.current;
-    const from = animatedWeeklyStreak;
-    const duration = 680;
-    const start = performance.now();
-    let frameId = 0;
-
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - start) / duration);
-      const eased = easeOutCubic(progress);
-      const next = Math.round(from + (target - from) * eased);
-      setAnimatedWeeklyStreak(next);
-
-      if (progress < 1) {
-        frameId = window.requestAnimationFrame(tick);
-      }
-    };
-
-    frameId = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frameId);
-  }, [weeklyStreakStats.current, isLoading]);
 
   const graphItems = useMemo(
     () => activeFichas.map((ficha) => ({ tags: ficha.tags ?? [] })),
@@ -333,7 +275,7 @@ const Index = () => {
               </div>
               {showMonthlyNewCards ? (
                 <span className="inline-flex items-center gap-1.5 ml-3 sm:ml-4 text-xs sm:text-sm font-normal text-muted-foreground/85 tabular-nums whitespace-nowrap">
-                  {currentMonthLabel}: {animatedMonthlyCount}
+                  {currentMonthLabel}: {monthlyCardsStats.currentMonth}
                   {monthlyCardsStats.delta > 0 && <ArrowUp className="w-3.5 h-3.5 text-success" />}
                 </span>
               ) : (
@@ -350,19 +292,17 @@ const Index = () => {
                   />
                   <span className="sm:hidden inline-flex h-8 flex-col justify-center leading-[1.05]">
                     <span className="text-[11px]">
-                      {isLoading ? "Racha semanal..." : isWeeklyStreakZero ? "Continúa..." : `racha semanal: ${animatedWeeklyStreak}`}
+                      {isLoading ? "Racha semanal..." : isWeeklyStreakZero ? "Continúa..." : `racha semanal: ${weeklyStreakStats.current}`}
                     </span>
                     <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/85">
                       ({weeklyCreationStats.currentWeek} nuevas)
-                      {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3 h-3" />}
                     </span>
                   </span>
                   <span className="hidden sm:inline">
-                    {isLoading ? "Racha semanal..." : isWeeklyStreakZero ? "Continúa..." : `racha semanal: ${animatedWeeklyStreak}`}
+                    {isLoading ? "Racha semanal..." : isWeeklyStreakZero ? "Continúa..." : `racha semanal: ${weeklyStreakStats.current}`}
                   </span>
                   <span className="hidden sm:inline-flex items-center gap-1 ml-3 text-muted-foreground/85">
                     ({weeklyCreationStats.currentWeek} nuevas)
-                    {weeklyCreationStats.trend === "up" && <ArrowUp className="w-3.5 h-3.5" />}
                   </span>
                 </button>
               )}

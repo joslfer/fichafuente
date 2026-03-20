@@ -8,11 +8,13 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import PublicFicha from "./pages/PublicFicha";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import PrivacyConsent from "./pages/PrivacyConsent";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, requiresPrivacyConsent } = useAuth();
 
   if (loading) {
     return (
@@ -23,11 +25,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (requiresPrivacyConsent) return <Navigate to="/privacy-consent" replace />;
   return <>{children}</>;
 };
 
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, requiresPrivacyConsent } = useAuth();
 
   if (loading) {
     return (
@@ -37,7 +40,27 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    if (requiresPrivacyConsent) return <Navigate to="/privacy-consent" replace />;
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const PrivacyConsentRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading, requiresPrivacyConsent } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!requiresPrivacyConsent) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -50,6 +73,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/privacy-consent" element={<PrivacyConsentRoute><PrivacyConsent /></PrivacyConsentRoute>} />
             <Route path="/f/:slug" element={<PublicFicha />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
