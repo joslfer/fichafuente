@@ -255,12 +255,21 @@
   transform: translateY(-4px) scale(1.04);
 }
 
+
 @media (hover: none) and (pointer: coarse) {
   .tag-hop:focus,
   .tag-hop:focus-visible {
-    outline: none;
-    box-shadow: none;
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
   }
+}
+
+.tag-hop:focus,
+.tag-hop:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
 }
 
 @keyframes ficha-laser-destroy {

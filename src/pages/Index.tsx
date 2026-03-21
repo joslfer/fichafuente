@@ -407,7 +407,7 @@ const Index = () => {
             {Array.from({ length: 6 }).map((_, index) => (
               <article
                 key={index}
-                className={`bg-card rounded-lg border border-border/60 p-5 min-h-[280px] flex flex-col ${
+                className={`bg-card rounded-lg border border-border/60 p-4 min-h-[260px] flex flex-col ${
                   index >= 2 ? "hidden sm:flex" : ""
                 } ${index >= 4 ? "hidden lg:flex" : ""}`}
               >
@@ -436,7 +436,7 @@ const Index = () => {
           </div>
         ) : visibleFichas.length > 0 ? (
           <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5${formOpen && typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? ' overflow-hidden' : ''}`}
           >
             {visibleFichas.map((ficha) => (
               <FichaCard
