@@ -19,7 +19,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <i className="loader loader--6"></i>
       </div>
     );
   }
@@ -35,7 +35,7 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <i className="loader loader--6"></i>
       </div>
     );
   }
@@ -54,7 +54,7 @@ const PrivacyConsentRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <i className="loader loader--6"></i>
       </div>
     );
   }

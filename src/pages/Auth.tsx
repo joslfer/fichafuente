@@ -44,7 +44,7 @@ const Auth = () => {
         <div className="flex flex-col items-center justify-center">
           {/* Loader animado */}
           <div className="mt-8">
-            <Loader className="scale-150" />
+            <i className="loader loader--6 scale-150"></i>
           </div>
           <p className="mt-6 text-sm text-muted-foreground">Iniciando sesión con Google...</p>
         </div>
