@@ -1,9 +1,9 @@
-# Fichafuente: crea fichas con evidencia verificable
+# Fichafuente
 
 **Crea fichas con evidencia verificable.**
 **Ten tus datos a mano para debatir.** 
 
-Entra en fichafuente.vercel.app para empezar a usarla. 
+Fichafuente es una app que he creado para poder fundamentar tus opiniones. 
 
 Esta herrmienta sirve para tener mejores debates. 
 
@@ -12,10 +12,6 @@ Esta herrmienta sirve para tener mejores debates.
 - exportar como PDF / (próximamente markdown)
 - asignar tags para que se organize automáticamente tu bibloteca
 - ver tu progreso con tu streak y tu grafo de nodos
-
-
-
-That's all!
 
 Tengo una página web: joslfer.com
 
