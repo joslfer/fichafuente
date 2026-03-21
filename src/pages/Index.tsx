@@ -371,10 +371,10 @@ const Index = () => {
               <button
                 key={selectedTag}
                 onClick={() => removeTagFilter(selectedTag)}
-                className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] ${
+                className={`tag-hop inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-px hover:shadow-md active:translate-y-0 active:scale-[0.96] ${
                   isArchivedTag(selectedTag)
-                    ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)] hover:ring-[hsl(var(--foreground)/0.18)]"
-                    : "bg-primary text-primary-foreground hover:brightness-110 hover:ring-primary/40"
+                    ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)]"
+                    : "bg-primary text-primary-foreground hover:brightness-110"
                 }`}
                 style={{ animationDelay: `${selectedIndex * 24}ms`, animationFillMode: "backwards" }}
               >
@@ -389,10 +389,10 @@ const Index = () => {
                 <button
                   key={tag}
                   onClick={() => addTagFilter(tag)}
-                  className={`tag-hop text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in hover:-translate-y-px hover:shadow-md hover:ring-1 active:translate-y-0 active:scale-[0.96] transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  className={`tag-hop text-[11px] font-medium px-2.5 py-1 rounded-full animate-tag-in hover:-translate-y-px hover:shadow-md active:translate-y-0 active:scale-[0.96] transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     isArchivedTag(tag)
-                        ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)] hover:ring-[hsl(var(--foreground)/0.18)]"
-                      : "bg-badge text-badge-foreground hover:bg-badge/80 hover:ring-primary/35"
+                        ? "bg-[hsl(var(--foreground)/0.12)] text-foreground/90 border border-[hsl(var(--foreground)/0.18)] hover:bg-[hsl(var(--foreground)/0.16)]"
+                      : "bg-badge text-badge-foreground hover:bg-badge/80"
                   }`}
                   style={{ animationDelay: `${Math.min(index * 32, 224)}ms`, animationFillMode: "backwards" }}
                 >
