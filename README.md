@@ -3,7 +3,7 @@
 **Crea fichas con evidencia verificable.**
 **Ten tus datos a mano para debatir.** 
 
-Fichafuente es una app que he creado para poder fundamentar tus opiniones. 
+Fichafuente es una app que he creado para poder fundamentar tus opiniones guardando datos y fuentes.
 
 Esta herrmienta sirve para tener mejores debates. 
 
