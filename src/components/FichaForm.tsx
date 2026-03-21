@@ -50,6 +50,18 @@ const hasMeaningfulDraftContent = (draft: FormDraft) => {
   );
 };
 
+// Grows a textarea to fit its content, never shrinking below minRows lines.
+const autoResize = (el: HTMLTextAreaElement | null, minRows = 2) => {
+  if (!el) return;
+  const style = getComputedStyle(el);
+  const lineHeight = parseFloat(style.lineHeight) || 20;
+  const paddingTop = parseFloat(style.paddingTop) || 0;
+  const paddingBottom = parseFloat(style.paddingBottom) || 0;
+  const minHeight = lineHeight * minRows + paddingTop + paddingBottom;
+  el.style.height = "auto";
+  el.style.height = `${Math.max(el.scrollHeight, minHeight)}px`;
+};
+
 const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormProps) => {
   const createFicha = useCreateFicha();
   const updateFicha = useUpdateFicha();
@@ -76,6 +88,18 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
   // Mirror showAuthorsField to a ref so the keydown handler always sees the latest value.
   const showAuthorsFieldRef = useRef(showAuthorsField);
   useEffect(() => { showAuthorsFieldRef.current = showAuthorsField; }, [showAuthorsField]);
+
+  // Auto-resize each textarea whenever its value changes.
+  useEffect(() => { autoResize(sourceNameRef.current, 2); }, [sourceName]);
+  useEffect(() => { autoResize(sourceUrlRef.current, 2); }, [sourceUrl]);
+  useEffect(() => { autoResize(authorsRef.current, 2); }, [authorsText]);
+
+  // Also resize authors field when it first becomes visible.
+  useEffect(() => {
+    if (showAuthorsField) {
+      window.setTimeout(() => autoResize(authorsRef.current, 2), 0);
+    }
+  }, [showAuthorsField]);
 
   // Auto-focus editor when opening a new ficha.
   useEffect(() => {
@@ -148,8 +172,8 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     const isMobile = window.matchMedia("(max-width: 640px)").matches;
     if (!isMobile) return;
 
-    // Keep the background anchored at the top while the fullscreen dialog is open.
-    window.scrollTo(0, 0);
+    // Save current scroll position before locking.
+    const scrollY = window.scrollY;
 
     const { body, documentElement } = document;
 
@@ -164,7 +188,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     documentElement.style.overflow = "hidden";
     body.style.overflow = "hidden";
     body.style.position = "fixed";
-    body.style.top = "0";
+    body.style.top = `-${scrollY}px`;
     body.style.left = "0";
     body.style.right = "0";
     body.style.width = "100%";
@@ -177,6 +201,8 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
       body.style.left = prevBodyLeft;
       body.style.right = prevBodyRight;
       body.style.width = prevBodyWidth;
+      // Restore scroll position exactly where the user was.
+      window.scrollTo(0, scrollY);
     };
   }, [open]);
 
@@ -539,15 +565,15 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
                   Fuente
                 </span>
               )}
-            <textarea
-              id="sourceName"
-              ref={sourceNameRef}
-              value={sourceName}
-              onChange={(e) => setSourceName(e.target.value)}
-              placeholder="Nombre de la fuente"
-              rows={2}
-              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-7 text-base leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
-            />
+              <textarea
+                id="sourceName"
+                ref={sourceNameRef}
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+                placeholder="Nombre de la fuente"
+                rows={2}
+                className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-7 text-base leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-hidden sm:pt-2 sm:text-sm"
+              />
             </div>
           </div>
 
@@ -558,13 +584,13 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
                 <span className="pointer-events-none absolute left-3 top-2 z-10 text-xs font-medium text-muted-foreground sm:hidden">
                   Autores
                 </span>
-              <textarea
-                ref={authorsRef}
-                value={authorsText}
-                onChange={(e) => setAuthorsText(e.target.value)}
-                rows={2}
-                className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-6 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-10 sm:pt-2"
-              />
+                <textarea
+                  ref={authorsRef}
+                  value={authorsText}
+                  onChange={(e) => setAuthorsText(e.target.value)}
+                  rows={2}
+                  className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-6 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-hidden sm:pt-2"
+                />
               </div>
             </div>
           )}
@@ -603,16 +629,16 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
                 <ClipboardPaste className="mr-1 h-3 w-3" />
                 {isPastingLink ? "Pegando..." : "Pegar"}
               </Button>
-            {linkPasteFeedback && <p className="mt-1 text-[11px] text-muted-foreground">{linkPasteFeedback}</p>}
-            <textarea
-              id="sourceUrl"
-              ref={sourceUrlRef}
-              value={sourceUrl}
-              onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder="https://..."
-              rows={2}
-              className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-7 text-base leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none sm:h-[72px] sm:pt-2 sm:text-sm"
-            />
+              {linkPasteFeedback && <p className="mt-1 text-[11px] text-muted-foreground">{linkPasteFeedback}</p>}
+              <textarea
+                id="sourceUrl"
+                ref={sourceUrlRef}
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="https://..."
+                rows={2}
+                className="mt-1 flex w-full rounded-sm border border-input bg-background px-3 py-2 pt-7 text-base leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-hidden sm:pt-2 sm:text-sm"
+              />
             </div>
           </div>
 
