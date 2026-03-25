@@ -74,7 +74,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
   const [authorsText, setAuthorsText] = useState("");
   const [showAuthorsField, setShowAuthorsField] = useState(false);
   const [isPastingLink, setIsPastingLink] = useState(false);
-  const [linkPasteFeedback, setLinkPasteFeedback] = useState<string | null>(null);
+  // Eliminado linkPasteFeedback: ya no se muestra feedback textual al pegar link
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [draftBanner, setDraftBanner] = useState(false);
   const draftTimerRef = useRef<number | null>(null);
@@ -339,7 +339,6 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
   const handlePasteSourceUrl = async () => {
     if (!navigator.clipboard) {
       sourceUrlRef.current?.focus();
-      setLinkPasteFeedback("Pega manualmente en el campo");
       return;
     }
 
@@ -347,17 +346,14 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
     try {
       const rawText = await navigator.clipboard.readText();
       if (!rawText.trim()) {
-        setLinkPasteFeedback("El portapapeles está vacío");
+        // No feedback textual, solo salir
         return;
       }
       setSourceUrl(rawText.trim());
-      setLinkPasteFeedback(null);
     } catch {
       sourceUrlRef.current?.focus();
-      setLinkPasteFeedback("Pega manualmente en el campo");
     } finally {
       setIsPastingLink(false);
-      window.setTimeout(() => setLinkPasteFeedback(null), 1800);
     }
   };
 
@@ -629,7 +625,7 @@ const FichaForm = ({ open, onOpenChange, editingFicha, onCreated }: FichaFormPro
                 <ClipboardPaste className="mr-1 h-3 w-3" />
                 {isPastingLink ? "Pegando..." : "Pegar"}
               </Button>
-              {linkPasteFeedback && <p className="mt-1 text-[11px] text-muted-foreground">{linkPasteFeedback}</p>}
+              {/* Eliminado feedback textual al pegar link */}
               <textarea
                 id="sourceUrl"
                 ref={sourceUrlRef}
